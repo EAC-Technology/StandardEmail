@@ -1,0 +1,12 @@
+{
+    "ob_board": "3", 
+    "timer_guid": "", 
+    "name": "New e-mail", 
+    "custom_event_guid": "", 
+    "class_name": "", 
+    "is_button": "1", 
+    "guid": "0d57fcc1-ffdf-4694-8a08-31ce57870fda", 
+    "type": "button", 
+    "page": "home", 
+    "description": ""
+}

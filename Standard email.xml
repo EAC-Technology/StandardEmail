@@ -1,0 +1,2525 @@
+<plugin author="" description="" guid="7fe4bae0-cd48-4688-a88c-57fe34d2f714" name="Standard email" picture="" version="">
+	
+	
+	<macro>
+		
+	
+		<name>lib_dialog_2</name>
+		
+	
+		<source>'Remarks V2.1 // Rev 02-10-2014
+'---------------------------------------
+'Need searchit.js as a resource to work
+'Because of bug in inheritence in VScript all variables of child class must be in mother class
+'There is bug when a child call the same method as a function of its own but from his mother class
+'the function can not return the 
+
+class component
+    
+    'general variables
+    dim name
+    dim properties
+    dim propertiesKeyWordsDict
+    dim attributes
+    dim componentTypeName
+    dim datafromrender 'Variable used when a child call render to workaround the bug of calling function from child
+    dim rulesCheck
+    
+    'varaibles for BtnGroup child class
+    dim buttonType
+    dim btnSize
+    dim buttons 
+    dim buttonsOrder
+    dim buttonsHint
+    dim showProgress
+    
+    'variables for PdfViewer
+    dim FileGuid
+    dim heightViewer
+    
+    'variables for Text
+    dim center
+    
+    'variable for TabsGroup
+    dim tab
+    dim tabsOrder
+    
+    'Variable for AutoSubmit
+    dim NextStep
+    
+    'Variable Timer
+    dim timeout
+    
+    'Variable Reload
+    dim urlGUID
+    
+    Sub Class_Initialize( )  
+        me.componentTypeName = &quot;component&quot;
+        me.properties = Dictionary
+        me.attributes = Dictionary( &quot;id&quot;, &quot;&quot;, &quot;visible&quot;, &quot;1&quot;, &quot;disabled&quot;, &quot;0&quot;, &quot;fullsize&quot;,&quot;1&quot;  )
+        me.propertiesKeyWordsDict = Dictionary(&quot;value&quot;,&quot;value&quot;,&quot;defaultvalue&quot;,&quot;defaultValue&quot;)
+        me.rulesCheck = Array
+    end sub
+    
+    Function wrappToCData( txt )
+        wrappToCData = &quot;&lt;!--[CDATA[&quot;  &amp; txt &amp; &quot;]]--&gt;&quot;
+    End Function
+
+    sub SetTypeName(name)
+      componentTypeName = name
+    end sub
+    
+    sub SetName(name)
+      attributes(&quot;id&quot;)=name
+    end sub
+    
+    sub visible(value)
+        if value then
+            attributes(&quot;visible&quot;)=&quot;1&quot;
+        else
+            attributes(&quot;visible&quot;)=&quot;0&quot;
+        end if
+    end sub
+    
+    sub disabled(value)
+        if value then
+            attributes(&quot;disabled&quot;)=&quot;1&quot;
+        else
+            attributes(&quot;disabled&quot;)=&quot;0&quot;
+        end if
+    end sub
+    
+    sub fullsize(value)
+        if value then
+            attributes(&quot;fullsize&quot;)=&quot;1&quot;
+        else
+            attributes(&quot;fullsize&quot;)=&quot;0&quot;
+        end if
+    end sub
+    
+    sub setAttr(name,value)
+      attributes(lcase(name))=value
+    end sub
+    
+    function getAttr(name)
+      getAttr=attributes(lcase(name))
+    end function
+    
+    sub setProp(name,value)
+      if lcase(name) in propertiesKeyWordsDict then
+        properties(propertiesKeyWordsDict(lcase(name)))=value
+      else
+        properties(lcase(name))=value
+      end if
+    end sub
+    
+    function getProp(name)
+      if lcase(name) in propertiesKeyWordsDict then
+        getProp=propertiesKeyWordsDict(lcase(name))
+      else
+        getProp=properties(lcase(name))
+      end if
+    end function
+    
+    sub addRule(rule)
+      AppendToArray(rulesCheck,rule)
+    end sub
+        
+    function render
+        
+        'generate Attributes
+        dim CreateXMLAtributes
+        dim beginText
+        dim middleText
+        dim endText
+        
+        set CreateXMLAtributes = buffer.create
+        for each key in attributes
+            CreateXMLAtributes.write( key &amp; &quot;='&quot; &amp; attributes( key ) &amp; &quot;' &quot; )
+        next
+        
+        beginText = &quot;&lt;&quot; &amp; componentTypeName &amp; &quot; &quot; &amp; CreateXMLAtributes.getvalue &amp; &quot;&gt;&lt;Properties&gt;&quot;
+        'generate properties
+        set CreatePropertyXML = buffer.create
+        for each key in properties
+            if key = &quot;options&quot; then
+                CreatePropertyXML.write( &quot;&lt;Property name='&quot; &amp; key &amp; &quot;'&gt;&quot; )
+                options = properties( key )
+                if lcase(TypeName(options))=&quot;dictionary&quot; then
+                    for each id in options
+                        CreatePropertyXML.write( &quot;&lt;option id='&quot; &amp; id &amp; &quot;'&gt;&quot; &amp; wrappToCData(options( id )) &amp; &quot;&lt;/option&gt;&quot; )
+                    next
+                else
+                    for i=0 to len(options)-1
+                        CreatePropertyXML.write( &quot;&lt;option id='&quot; &amp; options(i) &amp; &quot;'&gt;&quot; &amp; wrappToCData(options( i )) &amp; &quot;&lt;/option&gt;&quot; )
+                    next
+                end if
+                CreatePropertyXML.write( &quot;&lt;/Property&gt;&quot; )
+            else
+                CreatePropertyXML.write( &quot;&lt;Property name='&quot; &amp; key &amp; &quot;'&gt;&quot; &amp; wrappToCData(properties( key )) &amp; &quot;&lt;/Property&gt;&quot; )
+            end if 
+        next
+        middleText = CreatePropertyXML.getvalue
+      
+        endText = &quot;&lt;/Properties&gt;&lt;/&quot; &amp; componentTypeName &amp; &quot;&gt;&quot;
+        render = beginText &amp; middleText &amp; endText
+        datafromrender = beginText &amp; middleText &amp; endText
+    
+    end function
+
+end class
+
+class Heading: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;Heading&quot;)
+      mybase.setProp(&quot;label&quot;,&quot;&quot;)
+      mybase.setProp(&quot;defaultValue&quot;,&quot;&quot;)
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+    
+end class
+
+class LiveSearch: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;LiveSearch&quot;)
+      mybase.setProp(&quot;label&quot;,&quot;&quot;)
+    end sub
+    
+    sub label(value)
+      mybase.setProp(&quot;label&quot;,value)
+    end sub
+    
+    sub sourceURI(value)
+      mybase.setProp(&quot;sourceURI&quot;,value)
+    end sub
+    
+	sub sourceEvent(value)
+      mybase.setProp(&quot;sourceEvent&quot;,value)
+    end sub
+	
+	sub sourceData(value)
+      mybase.setProp(&quot;sourceData&quot;,value)
+    end sub
+	
+    function check(byref globalContext)
+      check=true
+    end function
+    
+end class
+
+class FileUpload: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;FileUpload&quot;)
+      mybase.setProp(&quot;label&quot;,&quot;&quot;)
+    end sub
+    
+    sub label(value)
+      mybase.setProp(&quot;label&quot;,value)
+    end sub
+
+    function check(byref globalContext)
+      check=true
+    end function
+    
+end class
+
+class RichTextArea: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;RichTextArea&quot;)
+      mybase.setProp(&quot;label&quot;,&quot;&quot;)
+      mybase.setProp(&quot;defaultValue&quot;,&quot;&quot;)
+	  mybase.setProp(&quot;height&quot;,&quot;400&quot;)
+    end sub
+    
+    sub label(value)
+      mybase.setProp(&quot;label&quot;,value)
+    end sub
+    
+    sub height(value)
+      mybase.setProp(&quot;height&quot;,value)
+    end sub
+    
+	sub defaultValue(value)
+      mybase.setProp(&quot;defaultValue&quot;,value)
+    end sub
+	
+    function check(byref globalContext)
+      check=true
+    end function
+    
+end class
+
+class TextBox: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;TextBox&quot;)
+      mybase.setProp(&quot;label&quot;,&quot;&quot;)
+      mybase.setProp(&quot;defaultValue&quot;,&quot;&quot;)
+    end sub
+    
+    sub label(value)
+      mybase.setProp(&quot;label&quot;,value)
+    end sub
+    
+    sub defaultValue(value)
+      mybase.setProp(&quot;defaultValue&quot;,value)
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+    
+end class
+
+class DropDown: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;DropDown&quot;)
+      mybase.setProp(&quot;label&quot;,&quot;&quot;)
+      mybase.setProp(&quot;defaultValue&quot;,&quot;&quot;)
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+    
+    sub label(value)
+      mybase.setProp(&quot;label&quot;,value)
+    end sub
+    
+    sub AddOption
+    
+    end sub
+    
+    sub removeOption
+    
+    end sub
+    
+end class
+
+class CheckBox: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;DropDown&quot;)
+      mybase.setProp(&quot;label&quot;,&quot;&quot;)
+      mybase.setProp(&quot;defaultValue&quot;,&quot;&quot;)
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+
+    
+    sub AddOption
+    
+    end sub
+    
+    sub removeOption
+    
+    end sub
+    
+end class
+
+class SimpleButton: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;Button&quot;)
+      mybase.setProp(&quot;value&quot;,&quot;&quot;)
+    end sub
+
+    function check(byref globalContext)
+      check=true
+    end function
+
+end class
+
+class Hypertext: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;Hypertext&quot;)
+      mybase.setProp(&quot;value&quot;,&quot;&quot;)
+    end sub
+    
+    sub value(data)
+       mybase.setProp(&quot;value&quot;,data)
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+
+    
+end class
+
+class Text: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;Hypertext&quot;)
+      mybase.setProp(&quot;value&quot;,&quot;&quot;)
+      center = false
+    end sub
+
+    sub setCenter(value)
+      center = value
+    end sub
+    
+    sub value(data)
+       if center then
+         mybase.setProp(&quot;value&quot;,&quot;&lt;Center&gt;&quot; &amp; data &amp; &quot;&lt;/Center&gt;&quot;)
+       else
+         mybase.setProp(&quot;value&quot;,data)
+       end if
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+
+end class
+
+class AutoSubmit: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;Hypertext&quot;)
+      mybase.setProp(&quot;value&quot;,&quot;&quot;)
+    end sub
+    
+    sub setNextStep(value)
+      nextstep = value
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+    
+    function render
+        set renderedData = buffer.create
+        set localrenderData = buffer.create
+        localrenderData.write(&quot;&lt;script type='text/javascript'&gt;function setOperationStep(step){jQuery('input[name=step]').attr( 'value', step );}&lt;/script&gt;&quot;)
+        localrenderData.write(&quot;&lt;script&gt; setOperationStep(&quot;&quot;&quot; &amp; nextstep &amp; &quot;&quot;&quot;);$(&quot;&quot;form.xml-dialog-form&quot;&quot;).submit();&lt;/script&gt;&quot;)
+        mybase.visible(false)
+        mybase.setProp(&quot;value&quot;,localrenderData.getValue)
+        mybase.render
+        renderedData.write(datafromrender)
+        set myFakeButton = New SimpleButton
+            myFakeButton.init
+            myFakeButton.visible(false)
+            
+        renderedData.write(myFakeButton.render)
+        render = renderedData.getValue
+    end function
+    
+end class
+
+class CTimer: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;Hypertext&quot;)
+      mybase.setProp(&quot;value&quot;,&quot;&quot;)
+    end sub
+    
+    sub setTimer(value,vtime)
+      nextstep = value
+      timeout = vtime
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+    
+    function render
+        set renderedData = buffer.create
+        set localrenderData = buffer.create
+        localrenderData.write(&quot;&lt;script type='text/javascript'&gt;function setOperationStep(step){jQuery('input[name=step]').attr( 'value', step );}&lt;/script&gt;&quot;)
+        localrenderData.write(&quot;&lt;script type='text/javascript'&gt;var varTime = setTimeout(function(){ setOperationStep(&quot;&quot;&quot; &amp; nextstep &amp; &quot;&quot;&quot;);window.clearTimeout(varTime);$(&quot;&quot;form.xml-dialog-form&quot;&quot;).submit();},&quot; &amp; timeout &amp; &quot;);&lt;/script&gt;&quot;)
+        mybase.visible(false)
+        mybase.setProp(&quot;value&quot;,localrenderData.getValue)
+        mybase.render
+        renderedData.write(datafromrender)
+        set myFakeButton = New SimpleButton
+            myFakeButton.init
+            myFakeButton.visible(false)         
+        renderedData.write(myFakeButton.render)
+        render = renderedData.getValue
+        
+     end function
+    
+end class
+
+class Refresh: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;Hypertext&quot;)
+      mybase.setProp(&quot;value&quot;,&quot;&quot;)
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+
+    function render
+      set renderedData = buffer.create
+      set localrenderData = buffer.create
+      if urlGUID=&quot;&quot; then
+        localrenderData.write(&quot;&lt;script type='text/javascript'&gt;location.reload();&lt;/script&gt;&quot;)
+      else
+        localrenderData.write(&quot;&lt;script type='text/javascript'&gt;window.location.href=&quot;&quot;home.vdom#&quot;&amp;urlGUID&amp;&quot;&quot;&quot;;location.reload();&lt;/script&gt;&quot;)
+      end if
+      mybase.visible(false)
+      mybase.setProp(&quot;value&quot;,localrenderData.getValue)
+      mybase.render
+      renderedData.write(datafromrender)
+      set myFakeButton = New SimpleButton
+            myFakeButton.init
+            myFakeButton.visible(false)         
+        renderedData.write(myFakeButton.render)
+        render = renderedData.getValue
+    end function
+    
+end class
+
+
+class PdfViewer: inherits component
+
+    Sub init
+      mybase.SetTypeName(&quot;Hypertext&quot;)
+      mybase.setProp(&quot;value&quot;,&quot;&quot;)
+    end sub
+    
+    sub setHeight(value)
+      heightViewer = value
+    end sub
+    
+    sub setFileGuid(value)
+      FileGuid = value
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+    
+    function render
+        set renderedData = buffer.create
+        mybase.setProp(&quot;value&quot;,&quot;&lt;iframe src=&quot;&quot;/get_pdf?id=&quot; &amp; FileGuid &amp; &quot;&quot;&quot; width=&quot;&quot;770&quot;&quot; height=&quot;&quot;&quot; &amp; heightViewer &amp; &quot;&quot;&quot; align=&quot;&quot;middle&quot;&quot;&gt;&lt;/iframe&gt; &quot;)
+        mybase.render
+        renderedData.write(datafromrender)
+        render = renderedData.getValue
+    end function
+    
+end class
+
+class BtnGroup: inherits component
+    
+    Sub init    
+      buttonType=&quot;text&quot;
+      buttons = Dictionary
+      buttonsHint = Dictionary
+      buttonsOrder = Array
+      mybase.SetTypeName(&quot;Hypertext&quot;)
+      mybase.setProp(&quot;value&quot;,&quot;&quot;)
+      showProgress = false
+    end sub
+    
+    sub setToPicture
+        buttonType=&quot;picture&quot;
+    end sub
+    
+    sub setToText
+        buttonType=&quot;text&quot;
+    end sub
+    
+    sub addBtn(btnLegend,StepToGo)
+        if instr(lcase(btnLegend),&quot;.png&quot;)&lt;&gt;0 or instr(lcase(btnLegend),&quot;.jpg&quot;)&lt;&gt;0 or instr(lcase(btnLegend),&quot;.gif&quot;)&lt;&gt;0 then
+          buttonType=&quot;picture&quot;
+        else
+          buttonType=&quot;text&quot;
+        end if
+        buttons(btnLegend)=StepToGo
+        buttonsHint(btnLegend)=&quot;&quot;
+        AppendToArray(buttonsOrder,btnLegend)
+    end sub
+    
+    sub SetHint(btnLegend,dataHint)
+      buttonsHint(btnLegend)=dataHint
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+    end function
+    
+    function render
+        set renderedData = buffer.create
+        set html = buffer.create
+        if showProgress then
+          if sessiondictionary(&quot;ProgressID&quot;)&lt;&gt;&quot;&quot; then
+            progressIndicatorStr = &quot;showProgress();getProgress('&quot;+sessiondictionary(&quot;ProgressID&quot;)+&quot;');&quot;
+          else
+            progressIndicatorStr = &quot;&quot;
+          end if
+        else
+          progressIndicatorStr = &quot;&quot;
+        end if
+        
+        html.write (&quot;&lt;script type='text/javascript'&gt;function setOperationStep(step){jQuery('input[name=step]').attr( 'value', step );&quot;+progressIndicatorStr+&quot;}&lt;/script&gt;&quot;)
+        html.write (&quot;&lt;table width=&quot;&quot;100%&quot;&quot; align=&quot;&quot;center&quot;&quot; style=&quot;&quot;padding:0px; margin:0px;&quot;&quot;&gt;&lt;tr&gt;&quot;)
+        host = system.application_hosts
+        nbBtn = len(buttonsOrder)
+        i=1
+        for each elt in buttonsOrder
+            nextstep = buttons(elt)
+            if buttonType=&quot;text&quot; then
+                action = &quot;'setOperationStep(&quot;&quot;&quot; &amp; nextstep &amp; &quot;&quot;&quot;)'&quot;
+                html.write (&quot;&lt;td align=&quot;&quot;center&quot;&quot;&gt;&lt;input style=&quot;&quot;width:&quot; &amp; cstr(btnSize) &amp; &quot;px;&quot;&quot; type=&quot;&quot;submit&quot;&quot; name=&quot;&quot;&quot; &amp; nextstep &amp; &quot;&quot;&quot; value=&quot;&quot;&quot; &amp; elt &amp; &quot;&quot;&quot; onclick=&quot; &amp; action &amp; &quot;&gt;&lt;/td&gt;&quot;)
+            else
+                action = &quot;'setOperationStep(&quot;&quot;&quot; &amp; nextstep &amp; &quot;&quot;&quot;);$(&quot;&quot;form.xml-dialog-form&quot;&quot;).submit();'&quot;
+                if elt in buttonsHint then
+                  select case i
+                    case 1 and nbBtn&lt;&gt;1
+                      buttonsHintPos = &quot;right&quot;
+                    case i=nbBtn
+                      buttonsHintPos = &quot;left&quot;
+                    case else
+                      buttonsHintPos = &quot;top&quot;
+                  end select
+                  html.write (&quot;&lt;td align=&quot;&quot;center&quot;&quot;&gt;&lt;div class=&quot;&quot;hint--&quot;&amp;buttonsHintPos&amp;&quot; hint--info&quot;&quot; data-hint=&quot;&quot;&quot;&amp;buttonsHint(elt)&amp;&quot;&quot;&quot;&gt;&lt;img style='cursor: pointer;' src='http://&quot; &amp; host(0) &amp; resources.public_link(elt) &amp; &quot;' name=&quot;&quot;&quot; &amp; nextstep &amp; &quot;&quot;&quot; onclick=&quot; &amp; action &amp; &quot;&gt;&lt;/div&gt;&lt;/td&gt;&quot;)
+                else
+                  html.write (&quot;&lt;td align=&quot;&quot;center&quot;&quot;&gt;&lt;img style='cursor: pointer;' src='http://&quot; &amp; host(0) &amp; resources.public_link(elt) &amp; &quot;' name=&quot;&quot;&quot; &amp; nextstep &amp; &quot;&quot;&quot; onclick=&quot; &amp; action &amp; &quot;&gt;&lt;/td&gt;&quot;)
+                end if
+            end if
+            i=i+1
+        next
+        html.write (&quot;&lt;/tr&gt;&lt;/table&gt;&quot;)
+        set myFakeButton = New SimpleButton
+            myFakeButton.init
+            myFakeButton.visible(false)
+            
+        renderedData.write(myFakeButton.render)
+        mybase.setProp(&quot;value&quot;,html.getValue)
+        mybase.render
+        renderedData.write(datafromrender)
+        render = renderedData.getValue
+        
+    end function
+    
+end class
+
+Function MakeTableRow( Cell1, Cell2 )
+    MakeTableRow = &quot;&lt;tr&gt;&lt;td class=&quot;&quot;rigthCell&quot;&quot;&gt;&quot;&amp;Cell1&amp;&quot;&lt;/td&gt;&lt;td&gt;&quot;&amp;Cell2&amp;&quot;&lt;/td&gt;&lt;/tr&gt;&quot;
+End Function
+
+'Tab SpecificComponent
+class TabInputText
+
+  dim label
+  dim name
+  dim value
+  dim defaultValue
+  dim className
+  dim incell
+  dim full
+  dim isCheckOk
+  dim ruleList
+  dim errTxt
+  dim Hint
+  dim isDate
+  
+  Sub Class_Initialize()
+    incell = false
+    full = false
+    isCheckOk = True
+    ruleList = Array
+    isDate = false
+  end sub
+  
+  sub addRule(ruleData)
+    AppendToArray(ruleList,ruleData)
+  end sub
+  
+  sub setToDate
+    isDate=true
+  end sub
+  
+  function check(byref globalContext)
+    check=true
+    set checkExpToEval = New Evaluator
+    set checkExpToEval.EvaluatorContext = globalContext
+    
+    'set value received
+    checkExpToEval.Eval(&quot;dim('me')&quot;)
+    checkExpToEval.Eval(&quot;affect('me',&quot;&amp;name&amp;&quot;)&quot;)
+    
+    result = &quot;&quot;
+    errTxt = &quot;&quot;
+    i=0
+    for each rule in ruleList
+      if TypeName(rule)=&quot;dictionary&quot; then
+        for each subrule in rule
+          result = checkExpToEval.Eval(subrule)
+        next
+      else
+        result = checkExpToEval.Eval(rule)
+      end if
+      if lcase(result)&lt;&gt;&quot;ok&quot; then
+          check = false
+          isCheckOk = false
+          i=i+1
+      logger (&quot;The rule : &quot; &amp; tojson(rule) &amp; &quot; on &lt;b&gt;&quot; &amp; name &amp; &quot;&lt;/b&gt; FAILED with result : {&quot;&amp;result&amp;&quot;}&quot;)
+          errTxt = errTxt &amp; &quot;err &quot; &amp; cstr(i) &amp; &quot;: &quot; &amp; result &amp; &quot;;&quot;
+          'showGrowl(result)
+      end if
+    next
+  end function
+
+  function render
+      className = SimpleIf(isCheckOk,&quot;&quot;, &quot;alert &quot;)
+      className = className &amp; SimpleIf(isDate,&quot;date &quot;, &quot;&quot;)
+    
+      if hint=&quot;&quot; then
+        htmldata = &quot;&lt;div class='inputFullWidth'&gt;&lt;input class='inputFullWidth&quot; &amp; SimpleIf(isEmpty(className),&quot;&quot;, &quot; &quot; &amp; className) &amp; &quot;' type='text' name='&quot;&amp;name&amp;&quot;' value='&quot; &amp; SimpleIf(isEmpty(value),defaultValue, value ) &amp; &quot;'&gt;&quot; &amp; &quot;&lt;span style='font-family: tahoma; font-size: xx-small; color: crimson;' &gt;&quot; &amp; errTxt &amp; &quot;&lt;/span&gt;&lt;/div&gt;&quot;
+      else
+        htmldata = &quot;&lt;div class='inputFullWidth hint--top hint--info' data-hint=&quot;&quot;&quot;&amp;Hint&amp;&quot;&quot;&quot;&gt;&lt;input class='inputFullWidth&quot; &amp; SimpleIf(isEmpty(className),&quot;&quot;, &quot; &quot; &amp; className) &amp; &quot;' type='text' name='&quot;&amp;name&amp;&quot;' value='&quot; &amp; SimpleIf(isEmpty(value),defaultValue, value ) &amp; &quot;'&gt;&lt;span style='font-family: tahoma; font-size: xx-small; color: crimson;' &gt;&quot; &amp; errTxt &amp; &quot;&lt;/span&gt;&lt;/div&gt;&quot;
+      end if
+      if incell then
+        render = htmldata
+      elseif full then
+        render = &quot;&lt;tr&gt;&lt;td colspan='2'&gt;&quot; &amp; label &amp; htmldata &amp; &quot;&lt;/td&gt;&lt;/tr&gt;&quot;
+      else
+        render = MakeTableRow (label, htmldata)
+      end if
+  end function
+  
+end class
+
+class TabPicture
+  
+  dim incell
+  dim picname
+  dim align
+  dim nextstep
+  
+  Sub Class_Initialize()
+    incell = false
+    align = &quot;middle&quot;
+  end sub
+  
+  function check(byref globalContext)
+    check=true
+  end function
+  
+  function render
+    host = system.application_hosts
+    action = &quot;'setOperationStep(&quot;&quot;&quot; &amp; nextstep &amp; &quot;&quot;&quot;);$(&quot;&quot;form.xml-dialog-form&quot;&quot;).submit();'&quot;
+    if incell then
+      render = &quot;&lt;img &quot; &amp; SimpleIf(nextstep&lt;&gt;&quot;&quot;,&quot;style='cursor: pointer;'&quot;,&quot;&quot;) &amp; &quot; src='http://&quot; &amp; host(0) &amp; resources.public_link(picname) &amp; &quot;'  &quot; &amp; SimpleIf(nextstep&lt;&gt;&quot;&quot;,&quot;onclick=&quot; &amp; action,&quot;&quot;) &amp; &quot; &gt;&quot;
+    else
+      render = &quot;&lt;tr&gt;&lt;td align='&quot; &amp; align &amp; &quot;' colspan='2' &gt;&lt;img &quot; &amp; SimpleIf(nextstep&lt;&gt;&quot;&quot;,&quot;style='cursor: pointer;'&quot;,&quot;&quot;) &amp; &quot; src='http://&quot; &amp; host(0) &amp; resources.public_link(picname) &amp; &quot;' &quot; &amp; SimpleIf(nextstep&lt;&gt;&quot;&quot;,&quot;onclick=&quot; &amp; action,&quot;&quot;) &amp; &quot;  &gt;&lt;/td&gt;&lt;/tr&gt;&quot;
+    end if
+  end function
+end class
+
+class TabText
+  
+  dim incell
+  dim align
+  dim value
+  dim overflow
+  dim height
+  
+  Sub Class_Initialize()
+    incell = false
+    align = &quot;middle&quot;
+    overflow = false
+  end sub
+  
+  function check(byref globalContext)
+    check=true
+  end function
+  
+  function render
+    
+    if incell then
+      render = value
+    else
+      if overflow then
+        styleData=&quot;overflow: auto;&quot;
+      end if
+      if cstr(height)&lt;&gt;&quot;&quot; then
+        styleData=styleData &amp; &quot;height: &quot;&amp;cstr(height)&amp;&quot;px;&quot;
+      end if
+      render = &quot;&lt;tr&gt;&lt;td align='&quot; &amp; align &amp; &quot;' colspan='2' &gt;&lt;div style='&quot;&amp;styleData&amp;&quot;'&gt;&quot;&amp;value&amp;&quot;&lt;/div&gt;&lt;/td&gt;&lt;/tr&gt;&quot;
+    end if
+    
+  end function
+
+end class
+
+class TabPdfViewer
+
+  dim height
+  dim incell
+  dim fileguid
+  dim msg
+  dim pdfTemplate
+  dim ratio
+  
+  Sub Class_Initialize()
+    incell = false
+    height = &quot;500&quot;
+    fileguid = &quot;&quot;
+    msg = &quot;&quot;
+    modeSession = false
+    ratio = 0.75
+  end sub
+  
+  function check(byref globalContext)
+    check=true
+  end function
+  
+  sub setPageStatus(obj)
+    set pageStatus = obj
+    modeSession = true
+  end sub
+  
+  function getFileGuid
+  
+      i=0
+      getFileGuid = false
+      
+      nodes = page_status.selected_nodes
+      
+      for each node in nodes
+        i=i+1
+        set nodeSelected = node
+      next
+    
+      Select case i
+
+        case 0
+          msg = &quot;Vous devez sélectionner un fichier PDF en premier lieu !&quot;
+          if SessionDictionary(&quot;fileguid&quot;)&lt;&gt;&quot;&quot; then
+            msg = &quot;&quot;
+            fileguid = SessionDictionary(&quot;fileguid&quot;)
+            getFileGuid = true
+          end if
+        case 1
+          if TypeName(nodeSelected)=&quot;Nothing&quot; then
+            msg = &quot;Le fichier selectionné n'existe plus ! Veuillez recharger la page&quot;
+          elseif nodeSelected.mimetype = &quot;folder&quot; then
+            if SessionDictionary(&quot;fileguid&quot;)&lt;&gt;&quot;&quot; then
+              msg = &quot;&quot;
+              fileguid = SessionDictionary(&quot;fileguid&quot;)
+              getFileGuid = true
+            else
+              msg = &quot;Vous avez sélectionné un répertoire et non un fichier de type PDF&quot;
+            end if
+          elseif nodeSelected.mimetype = &quot;application/pdf&quot; then
+            fileguid = nodeSelected.guid
+            getFileGuid = true
+          else
+            msg = &quot;Seul les fichiers PDF sont visibles&quot;
+          end if
+      case else
+        if SessionDictionary(&quot;fileguid&quot;)&lt;&gt;&quot;&quot; then
+            msg = &quot;&quot;
+            fileguid = SessionDictionary(&quot;fileguid&quot;)
+            getFileGuid = true 
+        else
+            msg = &quot;Vous ne pouvez visualiser qu'un seul fichier à la fois&quot;
+        end if
+      end select
+  
+  end function
+  
+  function render
+  
+    dim datatoshow
+    dim nodes
+    i=0
+    
+    if fileguid=&quot;&quot; then
+    
+        nodes = page_status.selected_nodes
+   
+        for each node in nodes
+            i=i+1
+            set nodeSelected = node
+        next
+      
+            
+        Select case i
+            case 0
+                if SessionDictionary(&quot;fileguid&quot;)&lt;&gt;&quot;&quot; then
+                    fileguid = SessionDictionary(&quot;fileguid&quot;)
+                    datatoshow = &quot;&lt;iframe src=&quot;&quot;/get_pdf?id=&quot; &amp; SessionDictionary(&quot;fileguid&quot;) &amp; &quot;&quot;&quot; width=&quot;&quot;100%&quot;&quot; height=&quot;&quot;&quot; &amp; height &amp; &quot;&quot;&quot; align=&quot;&quot;middle&quot;&quot;&gt;&lt;/iframe&gt;&quot;
+                else
+                    datatoshow = &quot;Vous devez sélectionner un fichier PDF en premier lieu !&quot;
+                end if
+            case 1
+                if nodeSelected.mimetype = &quot;folder&quot; then
+                    if SessionDictionary(&quot;fileguid&quot;)&lt;&gt;&quot;&quot; then
+                      datatoshow = &quot;&lt;iframe src=&quot;&quot;/get_pdf?id=&quot; &amp; SessionDictionary(&quot;fileguid&quot;) &amp; &quot;&quot;&quot; width=&quot;&quot;100%&quot;&quot; height=&quot;&quot;&quot; &amp; height &amp; &quot;&quot;&quot; align=&quot;&quot;middle&quot;&quot;&gt;&lt;/iframe&gt;&quot;
+                    else
+                      datatoshow = &quot;Vous avez sélectionné un répertoire et non un fichier de type PDF&quot;
+                    end if
+                elseif nodeSelected.mimetype = &quot;application/pdf&quot; or instr(lcase(nodeSelected.name),&quot;.pdf&quot;)&lt;&gt;0 then
+                    fileguid = nodeSelected.guid
+                    'if pdfTemplate then
+                    ' datatoshow = &quot;&lt;iframe src=&quot;&quot;/get_pdf?id=&quot; &amp; nodeSelected.guid &amp; &quot;&quot;&quot; height=&quot;&quot;100%&quot;&quot; width=&quot;&quot;&quot; &amp; height &amp; &quot;&quot;&quot; align=&quot;&quot;middle&quot;&quot;&gt;&lt;/iframe&gt;&quot;
+                    'else
+                      datatoshow = &quot;&lt;iframe src=&quot;&quot;/get_pdf?id=&quot; &amp; nodeSelected.guid &amp; &quot;&quot;&quot; width=&quot;&quot;100%&quot;&quot; height=&quot;&quot;&quot; &amp; height &amp; &quot;&quot;&quot; align=&quot;&quot;middle&quot;&quot;&gt;&lt;/iframe&gt;&quot;
+                    'end if  
+                else
+                     datatoshow = &quot;Seul les fichiers PDF sont visibles&quot;
+                end if
+           case else
+                if SessionDictionary(&quot;fileguid&quot;)&lt;&gt;&quot;&quot; then
+                    fileguid = SessionDictionary(&quot;fileguid&quot;)
+                    datatoshow = &quot;&lt;iframe src=&quot;&quot;/get_pdf?id=&quot; &amp; SessionDictionary(&quot;fileguid&quot;) &amp; &quot;&quot;&quot; width=&quot;&quot;100%&quot;&quot; height=&quot;&quot;&quot; &amp; height &amp; &quot;&quot;&quot; align=&quot;&quot;middle&quot;&quot;&gt;&lt;/iframe&gt;&quot;
+                else
+                    datatoshow = &quot;Vous ne pouvez visualiser qu'un seul fichier à la fois&quot;
+                end if
+                    
+        end select
+    else
+        datatoshow = &quot;Erreur, l'identifiant du fichier est absent. &gt;&gt;&gt; fileguid = &quot; &amp; fileguid
+    end if
+  
+    if incell or pdfTemplate then
+        render = datatoshow
+    else
+        render = &quot;&lt;tr&gt;&lt;td align='&quot; &amp; align &amp; &quot;' colspan='2' &gt;&quot;&amp; datatoshow &amp;&quot;&lt;/td&gt;&lt;/tr&gt;&quot;
+    end if
+  
+  end function
+
+end class
+
+function count_folders(folder) 
+  result = 0
+  for each file in folder.child_nodes
+    if file.mimetype = &quot;folder&quot; then
+      result = result + 1
+    end if
+  next
+  count_folders = result
+end function
+
+Function drill(folder, indent, byref optionsArray,byRef optionsDict,profondeur,depth)
+  if profondeur=depth then 
+    exit function
+  end if
+  value = folder.guid
+  if value = &quot;&quot; then value = &quot;00000000-0000-0000-0000-000000000000&quot;
+  AppendToArray (optionsArray,indent &amp; &quot;--&quot; &amp; folder.name)
+  optionsDict (cstr(len(optionsArray)))=folder.guid
+  indent = replace(indent, &quot;`&quot;, &quot; &quot;)
+  nodes = folder.child_nodes
+  count = count_folders(folder)
+  index = 1
+  for each node in nodes 
+    if node.mimetype = &quot;folder&quot; then
+      if index = count then
+        drill(node, indent &amp; &quot;  `&quot;, optionsArray, optionsDict,profondeur+1,depth)
+      else 
+        drill(node, indent &amp; &quot;  |&quot;, optionsArray, optionsDict,profondeur+1,depth)
+      end if
+      index = index + 1
+    end if
+  next
+
+End Function
+
+
+class TabDropDown
+
+  dim optionlist
+  dim name
+  dim label
+  dim selectedValue
+  dim incell
+  dim full
+  dim isCheckOk
+  dim ruleList
+  dim errTxt
+  dim Hint
+  dim Editable
+  dim Size
+  dim bSubmit
+  dim nextStep
+  dim multiple
+  dim optionListDict
+  dim isOptionList
+  
+  Sub Class_Initialize()
+    optionlist = array
+    incell = false
+    full = false
+    isCheckOk = true
+    ruleList = Array
+    Size = 1
+    bSubmit = false
+    nextStep = &quot;Exit&quot;
+    multiple = false
+    optionListDict = Dictionary
+    isOptionList = false
+  end sub
+  
+  sub autoSubmit(nxtStep)
+    bSubmit = true
+    nextStep = nxtStep
+  end sub
+  
+  sub addRule(ruleData)
+    AppendToArray(ruleList,ruleData)
+  end sub
+  
+  function check(byref globalContext)
+    check=true
+    set checkExpToEval = New Evaluator
+    set checkExpToEval.EvaluatorContext = globalContext
+    
+    'set value received
+    checkExpToEval.Eval(&quot;dim('me')&quot;)
+    checkExpToEval.Eval(&quot;affect('me',&quot;&amp;name&amp;&quot;)&quot;)
+    
+    result = &quot;&quot;
+    errTxt = &quot;&quot;
+    i=0
+    for each rule in ruleList
+      if TypeName(rule)=&quot;dictionary&quot; then
+        for each subrule in rule
+          result = checkExpToEval.Eval(subrule)
+        next
+      else
+        result = checkExpToEval.Eval(rule)
+      end if
+      if lcase(result)&lt;&gt;&quot;ok&quot; then
+          check = false
+          isCheckOk = false
+          i=i+1
+      logger (&quot;The rule : &quot; &amp; tojson(rule) &amp; &quot; on &lt;b&gt;&quot; &amp; name &amp; &quot;&lt;/b&gt; FAILED with result : {&quot;&amp;result&amp;&quot;}&quot;) 
+          errTxt = errTxt &amp; &quot;err &quot; &amp; cstr(i) &amp; &quot;: &quot; &amp; result &amp; &quot;;&quot;
+          'showGrowl(result)
+      end if
+    next
+  end function
+  
+  sub addOption(optionName)
+    AppendToArray(optionlist,optionname)  
+  end sub
+  
+  sub buildFromPath(pathStart,depth)
+    set folder = ProShare.get_by_path(pathStart) 
+    drill(folder, &quot;&quot;, optionlist,optionListDict,0,depth)
+    isOptionList = true
+  end sub
+  
+  sub buildFromUsers(groupName)
+    if groupName=&quot;&quot; then
+      groupName=&quot;Everyone&quot;
+    end if
+    try
+      UsersList = ProAdmin.groups(groupName)(0).get_users
+    catch
+      UsersList = Array
+    end try
+    For each user in UsersList
+      AppendToArray(optionlist,user.name)
+      optionListDict (cstr(len(optionlist))) = user.guid
+      isOptionList = true
+    next
+  end sub
+  
+  sub loadfromdb
+    if &quot;_&quot; &amp; name &amp; &quot;_&quot; in dbdictionary then
+      optionlist = asjson(dbdictionary(&quot;_&quot;&amp;lcase(name)&amp;&quot;_&quot;))
+    else
+      dbdictionary(&quot;_&quot; &amp; name &amp; &quot;_&quot;)=tojson(array())
+    end if
+  end sub
+  
+  sub loadfrompath(path,type)
+    pathOK = true
+    try
+      set localNode = Proshare.get_by_path(path)
+      pathType = localNode.mimetype
+    catch
+      pathOK = false
+    end try
+    
+    if pathOK and Typename(localNode)&lt;&gt;&quot;Nothing&quot; then
+      if pathType = &quot;folder&quot; then
+        allChildNodes = localNode.child_nodes
+        select case lcase(type)
+          case &quot;all&quot;
+            for each node in allChildNodes 
+              AppendToArray(optionlist,node.name)
+            next
+          case &quot;folders&quot;
+            for each node in allChildNodes
+              if node.mimetype = &quot;folder&quot; then
+                AppendToArray(optionlist,node.name)
+              end if
+            next
+          case &quot;files&quot;
+            for each node in allChildNodes
+              if node.mimetype &lt;&gt; &quot;folder&quot; then
+                AppendToArray(optionlist,node.name)
+              end if
+            next
+          case else
+            AppendToArray(optionlist,&quot;Invalid type&quot;)
+        end select
+     else
+       AppendToArray(optionlist,&quot;Path is not a folder&quot;)
+     end if
+   else
+     AppendToArray(optionlist,&quot;Invalid path&quot;)
+   end if
+  
+  end sub
+  
+  sub setEditable
+    Editable = true
+  end sub
+  
+  sub sort
+    'if typename(optionlist)=&quot;array&quot; then
+    '  if len(optionlist)&gt;0 then
+        optionlist = ArraySort(optionlist)
+    '  end if
+    'end if
+  end sub
+  
+  function render
+    
+    className = SimpleIf(isCheckOk,&quot;&quot;, &quot;alert&quot;)
+    
+    set renderdata = buffer.create
+    if bSubmit then
+      action = &quot;onclick='setOperationStep(&quot;&quot;&quot; &amp; nextstep &amp; &quot;&quot;&quot;);$(&quot;&quot;form.xml-dialog-form&quot;&quot;).submit();'&quot;
+    else
+      action = &quot;&quot;
+    end if
+    renderdata.write(&quot;&lt;div &quot;&amp;action&amp;&quot; class='inputFullWidth&quot; &amp; SimpleIf(Hint=&quot;&quot;,&quot;'&quot;,&quot; hint--top hint--info' data-hint=&quot;&quot;&quot;&amp;Hint&amp;&quot;&quot;&quot;&quot;) &amp; &quot;&gt;&quot;)
+    renderdata.write(&quot;&lt;select &quot;&amp;SimpleIf(multiple,&quot;multiple&quot;,&quot;&quot;)&amp;&quot; Size='&quot;&amp;cstr(Size)&amp;&quot;' class='inputFullWidth' &quot; &amp; SimpleIf(isEmpty(className),&quot;&quot;, &quot; &quot; &amp; className) &amp; &quot;' name='&quot;&amp;name&amp;&quot;'&gt;&quot;)
+    i=1
+    for each elt in optionlist
+      if isOptionList then
+        renderdata.write(&quot;&lt;option value='&quot;&amp;optionListDict(cstr(i))&amp;&quot;' &quot; &amp; SimpleIf(selectedValue=optionListDict(cstr(i)), &quot;selected&quot;, &quot;&quot; )&amp;&quot;&gt;&quot; &amp; elt &amp; &quot;&lt;/option&gt;&quot;)
+        i=i+1
+      else
+        renderdata.write(&quot;&lt;option value='&quot;&amp;elt&amp;&quot;' &quot; &amp; SimpleIf(selectedValue=elt, &quot;selected&quot;, &quot;&quot; )&amp;&quot;&gt;&quot; &amp; elt &amp; &quot;&lt;/option&gt;&quot;)
+      end if  
+    next
+    renderdata.write(&quot;&lt;/select&gt;&quot; &amp; &quot;&lt;span style='font-family: tahoma; font-size: xx-small; color: crimson;' &gt;&quot; &amp; errTxt &amp; &quot;&lt;/span&gt;&quot;)
+    renderdata.write(&quot;&lt;/div&gt;&quot;)
+    codeEditBefore = &quot;&quot;
+    codeEditAfter = &quot;&quot;
+    if Editable then
+      host = system.application_hosts
+      args = xml_dialog.get_answer
+      renderdata.write (&quot;&lt;script type='text/javascript'&gt;function setOperationStep(step){jQuery('input[name=step]').attr( 'value', step );}&lt;/script&gt;&quot;)
+      'renderdata.write (&quot;&lt;script type='text/javascript'&gt;function setInternalOperationStep(step){jQuery('input[name=internalstep]').attr( 'value', step );}&lt;/script&gt;&quot;)
+      'action = &quot;'setInternalOperationStep(&quot;&quot;&quot; &amp; replace(ToJson(Dictionary(&quot;step&quot;,&quot;manageDropDown&quot;,&quot;data&quot;,name,&quot;laststep&quot;,mainStep)),&quot;&quot;&quot;&quot;,&quot;&quot;&quot;&quot;&quot;&quot;) &amp; &quot;&quot;&quot;);setOperationStep(&quot;&quot;Internal&quot;&quot;);$(&quot;&quot;form.xml-dialog-form&quot;&quot;).submit();'&quot;
+      sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; normalize(name))=Dictionary(&quot;step&quot;,&quot;manageDropDown&quot;,&quot;data&quot;,name,&quot;laststep&quot;,mainStep)
+      action = &quot;'setOperationStep(&quot;&quot;Internal&gt;&quot; &amp; normalize(name) &amp; &quot;&quot;&quot;);$(&quot;&quot;form.xml-dialog-form&quot;&quot;).submit();'&quot;
+      codeEditBefore = &quot;&lt;div class='hint--top hint--info' data-hint='Editer le champ'&gt;&lt;img style='cursor: pointer;' src='http://&quot; &amp; host(0) &amp; resources.public_link(&quot;crayon.png&quot;) &amp; &quot;' onclick=&quot; &amp; action &amp; &quot;&gt;&amp;nbsp;&amp;nbsp;&quot;
+      codeEditAfter = &quot;&lt;/div&gt;&quot;
+    end if
+    
+    if incell then
+      render = codeEditBefore &amp; renderdata.getvalue &amp; codeEditAfter
+    elseif full then
+      render = &quot;&lt;tr&gt;&lt;td colspan='2'&gt;&quot; &amp; codeEditBefore &amp; label &amp; renderdata.getvalue &amp; codeEditAfter &amp; &quot;&lt;/td&gt;&lt;/tr&gt;&quot;
+    else
+      render = MakeTableRow (codeEditBefore &amp; label &amp; codeEditAfter,renderdata.getvalue)
+    end if
+    
+  end function
+
+end class
+
+class TabFieldSet 
+
+  dim optionlist
+  dim name
+  dim label
+  dim selectedValueList
+  dim args
+  dim isCheckOk
+  dim ruleList
+  dim stateList
+  dim height
+  dim identifier
+
+  Sub Class_Initialize()
+    optionlist = array
+    selectedValueList = array
+    incell = false
+    args = xml_dialog.get_answer
+    isCheckOk = dictionary
+    stateList = dictionary
+    ruleList = Array
+    height = 130
+    identifier = &quot;&quot;
+  end sub
+  
+  sub addOption(optionName)
+    AppendToArray(optionlist,optionname)
+    isCheckOk(optionName) = true
+    stateList(optionName) = false
+  end sub
+  
+  sub setOptionState(optionName,state)
+    if state then
+        stateList(optionName) = true
+    else
+        stateList(optionName) = false
+    end if
+  end sub
+  
+  sub addRule(ruleData)
+    AppendToArray(ruleList)
+  end sub
+  
+  function check(byref globalContext)
+    check=true
+  end function
+  
+  sub loadfromdb
+    if &quot;_&quot; &amp; name &amp; &quot;_&quot; in dbdictionary then
+      optionlist = asjson(dbdictionary(&quot;_&quot; &amp; lcase(name) &amp; &quot;_&quot;))
+      for each elt in optionlist
+        isCheckOk(elt) = true
+      next
+    else
+      dbdictionary(&quot;_&quot; &amp; name &amp; &quot;_&quot;)=tojson(array())
+    end if
+  end sub
+  
+  sub sort
+    optionlist = ArraySort(optionlist)
+  end sub
+ 
+  function render
+    set renderdata = buffer.create
+    renderdata.write(&quot;&lt;tr&gt;&lt;td colspan='2'&gt;&lt;fieldset&gt;&lt;legend&gt;&quot;&amp;label&amp;&quot;&lt;/legend&gt;&quot;)
+    renderdata.write(&quot;&lt;div style='width: 99%; overflow: auto; height: &quot;&amp;cstr(height)&amp;&quot;px;'&gt;&quot;)
+    for each elt in optionlist
+      renderdata.write(&quot;&lt;div&gt;&lt;input type='checkbox' name='&quot; &amp; SimpleIf(identifier=&quot;&quot;,normalize(elt),identifier+&quot;_&quot;+normalize(elt)) &amp; &quot;'&quot;)
+      if normalize(elt) in args then
+        if args(normalize(elt))=&quot;on&quot; then
+          renderdata.write(&quot;checked&quot;)
+        end if
+      elseif stateList(elt) then
+          renderdata.write(&quot;checked&quot;)
+      end if
+      renderdata.write(&quot;&gt;&lt;span &quot; &amp; SimpleIf(isCheckOk(elt),&quot;&quot;, &quot;class='alert'&quot;) &amp; &quot;&gt;&quot; &amp; elt &amp; &quot;&lt;/span&gt;&lt;/div&gt;&quot;)
+    next
+    renderdata.write(&quot;&lt;/div&gt;&quot;)
+    renderdata.write(&quot;&lt;/fieldset&gt;&lt;/td&gt;&lt;/tr&gt;&quot;)
+    render = renderdata.getvalue
+  end function
+
+end class
+
+class TabTextArea
+
+  dim label
+  dim name
+  dim value
+  dim defaultValue
+  dim className
+  dim incell
+  dim full
+  dim isCheckOk
+  dim ruleList
+  dim errTxt
+  dim Hint
+  dim row
+  dim editor
+  
+  Sub Class_Initialize()
+    incell = false
+    full = false
+    isCheckOk = true
+    ruleList = Array
+    row = 3
+    editor = false
+  end sub
+
+  sub addRule(ruleData)
+    AppendToArray(ruleList,ruleData)
+  end sub
+  
+  function check(byref globalContext)
+    check=true
+    set checkExpToEval = New Evaluator
+    set checkExpToEval.EvaluatorContext = globalContext
+    
+    'set value received
+    checkExpToEval.Eval(&quot;dim('me')&quot;)
+    checkExpToEval.Eval(&quot;affect('me',&quot;&amp;name&amp;&quot;)&quot;)
+    
+    result = &quot;&quot;
+    errTxt = &quot;&quot;
+    i=0
+    for each rule in ruleList
+      if TypeName(rule)=&quot;dictionary&quot; then
+        for each subrule in rule
+          result = checkExpToEval.Eval(subrule)
+        next
+      else
+        result = checkExpToEval.Eval(rule)
+      end if
+      if lcase(result)&lt;&gt;&quot;ok&quot; then
+          check = false
+          isCheckOk = false
+          i=i+1
+          logger (&quot;The rule : &quot; &amp; tojson(rule) &amp; &quot; on &lt;b&gt;&quot; &amp; name &amp; &quot;&lt;/b&gt; FAILED with result : {&quot;&amp;result&amp;&quot;}&quot;) 
+          errTxt = errTxt &amp; &quot;err &quot; &amp; cstr(i) &amp; &quot;: &quot; &amp; result &amp; &quot;;&quot;
+          'showGrowl(result)
+      end if
+    next
+  end function
+
+  function render
+    
+    className = SimpleIf(isCheckOk,&quot;&quot;, &quot;alert&quot;)
+    editoroptions = SimpleIf(editor,&quot; spellcheck='false' wrap='off'&quot;, &quot;&quot;)
+    host = system.application_hosts
+    
+    set txtAreaCode = Buffer.create
+    'if editor then
+    '  txtAreaCode.write(&quot;&lt;script src=&quot;&quot;http://tinymce.cachefly.net/4.0/tinymce.min.js&quot;&quot;&gt;&lt;/script&gt;&quot;)
+    'end if
+    txtAreaCode.write(&quot;&lt;div class='inputFullWidth'&quot; &amp; SimpleIf(Hint=&quot;&quot;,&quot;&quot;,&quot;class='hint--top hint--info' data-hint='&quot;&amp;Hint&amp;&quot;'&quot;) &amp; &quot;&gt;&quot;)
+    txtAreaCode.write(&quot;&lt;textarea class='inputFullWidth&quot; &amp; SimpleIf(isEmpty(className),&quot;&quot;, &quot; &quot; &amp; className) &amp; &quot;' &quot;+editoroptions+&quot; rows='&quot;&amp;cstr(row)&amp;&quot;' type='text' name='&quot;&amp;name&amp;&quot;'&gt;&quot;&amp;SimpleIf( isEmpty( value ), defaultValue, value )&amp;&quot;&lt;/textarea&gt;&lt;span style='font-family: tahoma; font-size: xx-small; color: crimson;' &gt;&quot; &amp; errTxt &amp; &quot;&lt;/span&gt;&quot;)
+    txtAreaCode.write(&quot;&lt;/div&gt;&quot;)
+    'if editor then
+    '  txtAreaCode.write(&quot;&lt;script&gt;tinymce.init({selector:'textarea'});&lt;/script&gt;&quot;)
+    'end if
+    if incell then
+      render = txtAreaCode.getValue
+    elseif full then
+      render = &quot;&lt;tr&gt;&lt;td colspan='2'&gt;&quot;&amp;label&amp;txtAreaCode.getValue&amp;&quot;&lt;/td&gt;&lt;/tr&gt;&quot;
+    else
+      render = MakeTableRow (label, txtAreaCode.getValue)
+    end if
+  end function
+
+end class
+
+class TabHistoryList
+
+  dim label
+  dim name
+  dim defaultValue
+  dim className
+  dim incell
+  dim full
+  dim height
+  
+  Sub Class_Initialize()
+    incell = false
+    full = true
+    height = &quot;500&quot;
+  end sub
+
+  
+  function check(byref globalContext)
+    check=true
+  end function
+  
+  sub addComment(type,msg)
+  
+    try
+      jsonInternalData = asjson(defaultValue)
+    catch
+      jsonInternalData = Dictionary
+    end try
+    
+    set user = ProAdmin.current_user
+    
+    newComment         = Dictionary
+    newComment(&quot;who&quot;)  = user.name
+    newComment(&quot;date&quot;) = now
+    newComment(&quot;msg&quot;)  = EscapeStr(msg)
+    
+    select case type
+      case &quot;indoc&quot;
+        newComment(&quot;type&quot;)=&quot;arrive_doc.png&quot;
+      case &quot;move&quot;
+        newComment(&quot;type&quot;)=&quot;deplacement.png&quot;
+      case &quot;comment&quot;
+        newComment(&quot;type&quot;)=&quot;commentaire.png&quot;
+      case &quot;updatestate&quot;
+        newComment(&quot;type&quot;)=&quot;change.png&quot;
+    end select
+    randomize
+    guid = md5(cstr(now))
+    jsonInternalData(guid)=newComment
+    defaultValue = tojson(jsonInternalData)
+ 
+  end sub
+
+  function render
+  
+    host = system.application_hosts
+    try
+      jsonInternalData = asjson(defaultValue)
+    catch
+      jsonInternalData = Dictionary
+    end try
+    
+    set HistoryListCodeCode = Buffer.create
+    HistoryListCodeCode.write(&quot;&lt;div style='display:none;'&gt;&lt;textarea name='&quot;&amp;name&amp;&quot;'&gt;&quot; &amp; defaultValue &amp; &quot;&lt;/textarea&gt;&lt;/div&gt;&quot;)
+    HistoryListCodeCode.write(&quot;&lt;style type=&quot;&quot;text/css&quot;&quot;&gt;div#wrapdisctable{overflow-y: scroll; width:100%; height:&quot;&amp;cstr(height)&amp;&quot;px}div.msgheader{clear: left;}div.msgcomment{clear: left;}table#disctable td{border-bottom: 1px dotted #dbdbdb;}table#disctable tr:last-child td{border-style: none;}table#disctable tr td{padding-bottom: 15px;}.msgheader{font-size: 12px;color: #999999;}&lt;/style&gt;&quot;)
+    HistoryListCodeCode.write(&quot;&lt;script type=&quot;&quot;text/javascript&quot;&quot;&gt;jQuery(&quot;&quot;table#disctable tr&quot;&quot;).sortElements(function(a,b){return (new Date($(a).attr(&quot;&quot;id&quot;&quot;)))&lt;(new Date($(b).attr(&quot;&quot;id&quot;&quot;)))?1:-1});&lt;/script&gt;&quot;)
+    
+    if typename(jsonInternalData)=&quot;Dictionary&quot; then
+      if len(jsonInternalData)=0 then
+        HistoryListCodeCode.write(&quot;&lt;div style=&quot;&quot;clear:left&quot;&quot;&gt;Aucun historique disponible&lt;/div&gt;&quot;)
+      else
+        HistoryListCodeCode.write(&quot;&lt;div id=&quot;&quot;wrapdisctable&quot;&quot;&gt;&lt;table id=&quot;&quot;disctable&quot;&quot; width=&quot;&quot;100%&quot;&quot;&gt;&quot;)
+        for each elt in jsonInternalData
+          m = jsonInternalData(elt)
+          d = CDate( m(&quot;date&quot; ) )
+          part2 = Hour(d) &amp; &quot;:&quot; &amp; Minute(d) &amp; &quot;:&quot; &amp; Second(d)
+          part11 = Month(d) &amp; &quot;/&quot; &amp; Day(d) &amp; &quot;/&quot; &amp; Year(d) &amp; &quot; &quot; &amp; part2
+          part12 = Day(d) &amp; &quot;.&quot; &amp; Month(d) &amp; &quot;.&quot; &amp; Year(d) &amp; &quot; &quot; &amp; part2
+          
+          HistoryListCodeCode.write(&quot;&lt;tr id=&quot;&quot;&quot; &amp; part11 &amp; &quot;&quot;&quot;&gt;&lt;td&gt;&lt;div class=&quot;&quot;msgheader&quot;&quot;&gt;&lt;img src='http://&quot; &amp; host(0) &amp; resources.public_link(m(&quot;type&quot;)) &amp; &quot;'&gt;&quot; &amp; m(&quot;who&quot;) &amp; &quot; (&quot; &amp; part12 &amp; &quot;)&lt;/div&gt;&quot;)
+          HistoryListCodeCode.write(&quot;&lt;div class=&quot;&quot;msgcomment&quot;&quot;&gt;&quot; &amp; m(&quot;msg&quot;) &amp; &quot;&lt;/div&gt;&lt;/td&gt;&lt;/tr&gt;&quot;)
+          
+        next
+        HistoryListCodeCode.write(&quot;&lt;/table&gt;&lt;/div&gt;&quot;)
+      end if
+    end if
+    
+    if incell then
+      render = HistoryListCodeCode.getValue
+    elseif full then
+      render = &quot;&lt;tr&gt;&lt;td colspan='2'&gt;&quot;&amp;HistoryListCodeCode.getValue&amp;&quot;&lt;/td&gt;&lt;/tr&gt;&quot;
+    else
+      render = MakeTableRow (&quot;Historique&quot;, HistoryListCodeCode.getValue)
+    end if
+  end function
+
+end class
+
+
+class TabButton
+
+  dim size
+  dim incell
+  dim nextstep
+  dim align
+  dim label
+  dim visible
+
+  Sub Class_Initialize()
+    incell    = false
+    size      = 70
+    nextstep  = &quot;Exit&quot;
+    align     = &quot;center&quot;
+    label     = &quot;button&quot;
+    visible   = true
+  end sub
+  
+  function check(byref globalContext)
+    check=true
+  end function
+
+  function render
+  
+    if visible then
+      action = &quot;'setOperationStep(&quot;&quot;&quot; &amp; nextstep &amp; &quot;&quot;&quot;)'&quot;
+      if incell then
+          render = &quot;&lt;input style=&quot;&quot;width:&quot; &amp; cstr(Size) &amp; &quot;px;&quot;&quot; type=&quot;&quot;submit&quot;&quot; value=&quot;&quot;&quot; &amp; label &amp; &quot;&quot;&quot; onclick=&quot; &amp; action &amp; &quot;&gt;&quot;
+      else
+          render = &quot;&lt;tr&gt;&lt;td align='&quot; &amp; align &amp; &quot;' colspan='2' &gt;&lt;input style=&quot;&quot;width:&quot; &amp; cstr(Size) &amp; &quot;px;&quot;&quot; type=&quot;&quot;submit&quot;&quot; value=&quot;&quot;&quot; &amp; label &amp; &quot;&quot;&quot; onclick=&quot; &amp; action &amp; &quot;&gt;&lt;td&gt;&lt;/tr&gt;&quot;
+      end if
+    else
+      render = &quot;&quot;
+    end if
+  end function
+
+end class
+
+class TabCell
+
+  dim nbCell
+  dim size
+  dim align
+  dim valign
+  
+  Sub Class_Initialize()
+    size = Array
+    align = Array
+    valign = Array
+  end sub
+  
+  sub CreateCell(nb)
+    nbCell = nb
+    for i = 1 to nb
+      AppendToArray(size,cstr(cint(100/nb)) &amp; &quot;%&quot;)
+      AppendToArray(align,&quot;center&quot;)
+      AppendToArray(valign,&quot;middle&quot;)
+    next
+  end sub
+  
+end class
+
+
+'Tab components container
+class TabContainer
+
+  dim Component
+  dim ComponentsOrder
+  dim TabName
+  dim args
+  dim pdfTemplate
+  
+  Sub Class_Initialize()
+    Component = Dictionary
+    ComponentsOrder = Array
+    args = xml_dialog.get_answer
+    pdfTemplate = false
+  end sub
+  
+  sub addComponent(id,componentType)
+    typeFound = true
+    
+    select case lcase(componentType)
+    
+      case &quot;inputtext&quot;
+        set Component(id)= New TabInputText
+        Component(id).name = normalize(id)
+        if normalize(id) in args then
+          component(id).defaultValue = args(normalize(id))
+        end if
+        
+      case &quot;group&quot;
+        set Component(id)= New TabCell
+            
+      case &quot;picture&quot;
+        set Component(id)= New TabPicture
+  
+      case &quot;text&quot;
+        set Component(id)= New TabText
+ 
+      case &quot;pdfviewer&quot;
+        set Component(id)= New TabPdfViewer
+            Component(id).pdfTemplate = pdfTemplate
+      
+      case &quot;dropdown&quot;
+        set Component(id)= New TabDropDown
+        Component(id).name = normalize(id)
+        if normalize(id) in args then
+          component(id).selectedValue = args(normalize(id))
+        end if
+        
+      case &quot;fieldset&quot;
+        set Component(id)= New TabFieldSet
+        Component(id).name = normalize(id)
+      
+      case &quot;textarea&quot;
+        set Component(id)= New TabTextArea
+        Component(id).name = normalize(id)
+        if normalize(id) in args then
+          component(id).defaultValue = args(normalize(id))
+        end if
+        
+      case &quot;button&quot;
+        set Component(id)= New TabButton
+      
+      case &quot;history&quot;
+        set Component(id)= New TabHistoryList
+        Component(id).name = normalize(id)
+        if normalize(id) in args then
+          component(id).defaultValue = args(normalize(id))
+        end if
+      
+      case else
+        typeFound = false
+    end select
+    
+    if typefound then
+      appendToArray(ComponentsOrder,id)
+    end if
+  
+  end sub
+  
+  function check(byref globalContext)
+    check=true
+    for each elt in ComponentsOrder
+      try
+        check = CBool(check) and CBool(Component(elt).check(globalContext))
+      catch
+        logger (&quot;Check Tab Component : &quot; &amp; elt &amp; &quot; FAIL no method Check for class &quot; &amp; TypeName(Component(elt)))
+      end try
+    next
+  end function
+  
+  function render
+  
+    dim iscell
+    iscell = false
+    
+    set html = buffer.create
+    html.write(&quot;&lt;div id=&quot;&quot;&quot;&amp;normalize(TabName)&amp;&quot;&quot;&quot;&gt;&quot;)
+    
+    if PdfTemplate then
+      html.write(&quot;&lt;table id='pdfTemplate' width=&quot;&quot;100%&quot;&quot; cellpadding=&quot;&quot;0&quot;&quot;&gt;&lt;tr&gt;&lt;td id='pdf' width='{0}' &gt;{pdf}&lt;/td&gt;&lt;td valign='top'&gt;&quot;)
+    end if
+    html.write(&quot;&lt;table width=&quot;&quot;100%&quot;&quot; cellpadding=&quot;&quot;1&quot;&quot;&gt;&lt;thead&gt;&lt;tr&gt;&lt;td width=&quot;&quot;30%&quot;&quot;&gt;&lt;/td&gt;&lt;td width=&quot;&quot;70%&quot;&quot;&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&quot; )    
+    
+
+    'render components
+    i=0
+    for each elt in ComponentsOrder
+      if pdfTemplate and lcase(TypeName(Component(elt)))=&quot;tabpdfviewer&quot; then
+            memPdfViewerRender = Component(elt).render
+            memSize = Component(elt).height
+            memRatio = Component(elt).ratio
+      else
+        if iscell then
+          if i=Component(saveelt).nbCell then
+            html.write(&quot;&lt;/tr&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&quot;)
+            if lcase(TypeName(Component(elt)))=&quot;tabcell&quot; then
+              saveelt = elt
+              i=0
+              html.write(&quot;&lt;tr&gt;&lt;td colspan='2'&gt;&lt;table width='100%'&gt;&lt;tr&gt;&quot;)
+            else
+              try
+                html.write(Component(elt).render)
+              catch
+                logger (&quot;Oups ! This component can not be rendered : &quot; &amp; elt)
+              end try
+              iscell = false
+              i=0
+            end if  
+          else
+            html.write(&quot;&lt;td width='&quot; &amp; Component(saveelt).size(i) &amp; &quot;' align='&quot; &amp; Component(saveelt).align(i) &amp; &quot;' valign='&quot; &amp; Component(saveelt).valign(i) &amp; &quot;'&gt;&quot;)
+            try
+              Component(elt).incell = true
+              html.write(Component(elt).render)
+            catch
+            end try
+            html.write(&quot;&lt;/td&gt;&quot;)
+            i=i+1
+          end if
+        else
+          if lcase(TypeName(Component(elt)))=&quot;tabcell&quot; then
+            saveelt = elt
+            iscell = true
+            i=0
+            html.write(&quot;&lt;tr&gt;&lt;td colspan='2'&gt;&lt;table width='100%'&gt;&lt;tr&gt;&quot;)
+          else
+            html.write(Component(elt).render)          
+          end if
+        end if
+      end if
+    next
+    if i&lt;&gt;0 then
+      html.write(&quot;&lt;/tr&gt;&lt;/table&gt;&lt;/td&gt;&lt;/tr&gt;&quot;)
+    end if
+    html.write( &quot;&lt;/tbody&gt;&lt;/table&gt;&quot;)
+    
+    if pdfTemplate then
+      html.write(&quot;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&quot;)
+    end if
+    html.write( &quot;&lt;/div&gt;&quot; )
+    if pdfTemplate then
+      datatorender = replace(html.getvalue,&quot;{pdf}&quot;,replace(replace(memPdfViewerRender,&quot;&lt;tr&gt;&quot;,&quot;&quot;),&quot;&lt;/tr&gt;&quot;,&quot;&quot;))
+      render = replace(datatorender,&quot;{0}&quot;,cstr(cint(memSize*memRatio)))
+    else
+      render = html.getvalue
+    end if
+
+    
+  end function
+  
+end class
+
+class TabGroup: inherits component 
+
+    Sub init   
+      tab       = Dictionary
+      tabsorder = Array
+      mybase.SetTypeName(&quot;Hypertext&quot;)
+      mybase.setProp(&quot;value&quot;,&quot;&quot;)
+    end sub
+    
+    sub addTab(TabName)
+      set tab(TabName)= New TabContainer
+      tab(TabName).TabName=TabName
+      AppendToArray(tabsorder,TabName)
+    end sub
+    
+    function check(byref globalContext)
+      check=true
+      for each elt in tabsorder
+        'Try
+          check = Cbool(check) and Cbool(tab(elt).check(globalContext))
+        'catch
+        '  logger (&quot;FAIL to Check TAB(&quot;&amp;elt&amp;&quot;)&quot;)
+        'end try
+      next
+    end function
+    
+    function render
+      set html = buffer.create
+      'Tab style'
+      html.write( &quot;&lt;style type=&quot;&quot;text/css&quot;&quot; media=&quot;&quot;screen&quot;&quot;&gt;.rigthCell {text-align: right;} .inputFullWidth {width: 100%;} .alert {background-color: rgba(255, 5, 5, 0.2);} div.customTabs background: #333;padding: 1em;}div.customContainer {margin: auto; width: 90%; margin-bottom: 10px;} ul.customTabNavigation {list-style: none; margin: 0; padding: 0;} ul.customTabNavigation li {display: inline;} ul.customTabNavigation li a {background-color: #666;padding: 3px 9px; color: #D1D1D1; text-decoration: none;} ul.customTabNavigation li a.selected, ul.customTabNavigation li a.selected:hover {background: #FFF;color: #000;} ul.customTabNavigation li a:hover {background: #ccc;background: #ccc; color: #000;} ul.customTabNavigation li a:focus {outline: 0;} div.customTabs div {padding: 5px; margin-top: 3px; border: 1px solid #FFF; background: #FFF;}&lt;/style&gt;&quot; )
+      'Tab script'
+      html.write( &quot;&lt;script type=&quot;&quot;text/javascript&quot;&quot;&gt;$(function(){var tabContainers = $('div.customTabs &gt; div');tabContainers.hide().filter(':first').show();$('div.customTabs ul.customTabNavigation a').click(function(){tabContainers.hide();tabContainers.filter(this.hash).show();$('div.customTabs ul.customTabNavigation a').removeClass('selected');$(this).addClass('selected');return false;}).filter(':first').click();});&lt;/script&gt;&quot;) 
+      html.write (&quot;&lt;script type='text/javascript'&gt;function setMemTab(tabname){jQuery('input[name=tabselected]').attr( 'value', tabname );}&lt;/script&gt;&quot;)
+      html.write( &quot;&lt;div class=&quot;&quot;customTabs&quot;&quot;&gt;&quot; )
+    
+      'Tab buttons'
+      html.write( &quot;&lt;ul class=&quot;&quot;customTabNavigation&quot;&quot;&gt;&quot;)
+      for each elt in tabsorder
+        html.write( &quot;&lt;li&gt;&lt;a id='a&quot;&amp;normalize(elt)&amp;&quot;' href='#&quot; &amp; normalize(elt) &amp; &quot;' onclick=&quot;&quot;setMemTab('&quot; &amp; normalize(elt) &amp; &quot;')&quot;&quot; &gt;&quot; &amp; elt &amp; &quot;&lt;/a&gt;&lt;/li&gt;&quot;)
+        
+      next
+      html.write( &quot;&lt;/ul&gt;&quot; )
+      
+      for each elt in tabsorder
+        html.write(tab(elt).render)
+      next
+      args = xml_dialog.get_answer
+      
+      if args(&quot;tabselected&quot;)&lt;&gt;&quot;&quot; then
+        html.write (&quot;&lt;script type='text/javascript'&gt;&quot;)
+        for each elt in tabsorder
+          if normalize(elt)=args(&quot;tabselected&quot;) then
+            html.write (&quot;jQuery('div[id=&quot;&amp;normalize(elt)&amp;&quot;]').attr( 'style', 'display: block;' );&quot;)
+            html.write (&quot;jQuery('a[id=a&quot;&amp;normalize(elt)&amp;&quot;]').attr( 'class', 'selected' );&quot;)
+          else
+            html.write (&quot;jQuery('div[id=&quot;&amp;normalize(elt)&amp;&quot;]').attr( 'style', 'display: none;' );&quot;)
+            html.write (&quot;jQuery('a[id=a&quot;&amp;normalize(elt)&amp;&quot;]').attr( 'class', '' );&quot;)
+          end if
+        next
+        html.write (&quot;setMemTab('&quot;&amp;args(&quot;tabselected&quot;)&amp;&quot;');&quot;)
+        html.write (&quot;&lt;/script&gt;&quot;)
+      end if
+    
+      mybase.setProp(&quot;value&quot;,html.getValue)
+      mybase.render
+      render = datafromrender
+    
+    end function
+
+end class
+
+class XMLScreen
+
+    dim component
+    dim compOrder
+    dim DropDownSearchable
+    dim Title
+    dim Width
+    dim Height
+    dim NextStep
+    dim args
+    
+    Sub Class_Initialize( )
+        DropDownSearchable = false
+        component = Dictionary
+        compOrder = Array
+        Title = &quot;Screen&quot; 
+        Width = 400
+        Height = 150
+        NextStep=&quot;Exit&quot;
+    end
+    
+    function getNextStep
+      getNextStep=NextStep
+    end function
+    
+    sub SetNextStep(NextStepName)
+      NextStep=NextStepName
+    end sub
+    
+    sub addComponent(Name,ComponentType)
+        typeFound = true
+        select case lcase(ComponentType)
+            case &quot;heading&quot;
+                set component(Name) = New Heading
+                    
+            case &quot;textbox&quot;
+                set component(Name) = New TextBox
+                    
+            case &quot;textarea&quot;
+                set component(Name) = New TextArea
+            
+            case &quot;pdfviewer&quot;
+                set component(Name) = New PdfViewer
+                
+            case &quot;dropdown&quot;
+                set component(Name) = New DropDown
+                
+            case &quot;checkbox&quot;
+                set component(Name) = New CheckBox
+            
+            case &quot;simplebutton&quot;
+                set component(Name) = New SimpleButton
+            
+            case &quot;hypertext&quot;
+                set component(Name) = New Hypertext
+                    
+            case &quot;text&quot;
+                set component(Name) = New Text
+            
+            case &quot;btngroup&quot;
+                set component(Name) = New BtnGroup
+                    
+            case &quot;tabgroup&quot;
+                set component(Name) = New TabGroup
+            
+            case &quot;autosubmit&quot;
+                set component(Name) = New AutoSubmit
+            
+            case &quot;timer&quot;
+                set component(Name) = New CTimer
+                
+            case &quot;refresh&quot;
+                set component(Name) = New Refresh
+			
+			case &quot;livesearch&quot;
+                set component(Name) = New LiveSearch
+				
+			case &quot;richtextarea&quot;
+                set component(Name) = New RichTextArea	
+
+			case &quot;fileupload&quot;
+                set component(Name) = New FileUpload
+
+            case else
+                typeFound = false
+        end select
+        
+        if typeFound then
+            AppendToArray(compOrder,Name)
+            component(Name).init
+            component(Name).SetName(normalize(name))
+            args = xml_dialog.get_answer
+            if normalize(name) in args then
+              try
+                component(Name).defaultValue(args(normalize(name)))
+              catch
+              end try
+            end if
+        end if
+        
+    end sub
+    
+    sub SetDropDownSearchable
+        DropDownSearchable = true
+    end sub
+    
+    sub UnSetDropDownSearchable
+        DropDownSearchable = false
+    end sub
+    
+    sub SetVisibility(ArrayOfComponent,value)
+        for each elt in ArrayOfComponent
+            component(Name).visible(value)
+        next
+    end sub
+    
+    sub SetDisability(ArrayOfComponent,value)
+        for each elt in ArrayOfComponent
+            component(Name).disabled(value)
+        next
+    end sub
+    
+    function check(byref globalContext)
+      check = true
+      for each elt in compOrder
+        Try
+          check = CBool(check) and CBool(component(elt).check(globalContext))
+        catch
+          Logger (&quot;FAIL to Check Component :&quot; &amp; elt)
+        end try
+      next
+    end function
+    
+    function render
+        host = system.application_hosts
+        'Add Script to make drowndown searchable
+        if DropDownSearchable then
+            set component(&quot;--DropDownSearchable&quot;) = New Hypertext
+                component(&quot;--DropDownSearchable&quot;).init
+                component(&quot;--DropDownSearchable&quot;).SetName(&quot;--DropDownSearchable&quot;)
+                AppendToArray(compOrder,&quot;--DropDownSearchable&quot;)
+                set html = buffer.create
+                html.write(&quot;&lt;script type=&quot;&quot;text/javascript&quot;&quot; src='http://&quot; &amp; host(0) &amp; resources.public_link(&quot;searchit.js&quot;) &amp; &quot;'&gt;&lt;/script&gt;&quot;)
+                html.write(&quot;&lt;script type=&quot;&quot;text/javascript&quot;&quot;&gt;$(document).ready(function() {$(&quot;&quot;select&quot;&quot;).searchit({ textFieldClass: 'searchbox' });});&lt;/script&gt;&quot;)
+                html.write(&quot;&lt;style type=&quot;&quot;text/css&quot;&quot;&gt; body {}.searchbox {border:1px solid #456879;border-radius:6px;height: 22px;width: 100%;margin-top: 5px;}&lt;/style&gt;&quot;)
+                component(&quot;--DropDownSearchable&quot;).setProp(&quot;value&quot;,html.getValue)      
+        end if
+        'Add CSS to manage hint
+        
+        set renderBuffer = Buffer.create
+        for each elt in compOrder
+            renderBuffer.write(component(elt).render)
+        next
+        render = renderBuffer.getValue
+    end function
+    
+    function componentCount
+        componentCount = len(compOrder)
+    end function
+    
+end class
+
+Class XMLDialogBuilder
+
+    dim Screen
+    dim templateScreen
+    dim internalStep
+    dim globalContext
+    
+    Sub Class_Initialize( )
+        Screen = Dictionary
+        templateScreen = &quot;&quot;
+    end
+    
+    Function wrappToCData( txt )
+      wrappToCData = &quot;&lt;!--[CDATA[&quot;  &amp; txt &amp; &quot;]]--&gt;&quot;
+    End Function
+    
+    sub AddScreen(ScreenName)
+        set Screen(ScreenName)=New XMLScreen
+    end sub
+    
+    sub RemoveScreen(ScreenName)
+        remove Screen(ScreenName)
+    end sub
+    
+    function checkScreen(screenName)
+        args = xml_dialog.get_answer
+        set globalContext = New EvalContext
+        for each var in args
+          if isnumeric(var) then
+            globalContext.setVariable(var,cint(args(var)))
+          else
+            globalContext.setVariable(var,args(var))
+          end if
+        next
+        Screen(screenName).UnSetDropDownSearchable
+        checkScreen = Cbool(Screen(screenName).check(globalContext))
+      
+    end function
+    
+    function CompileScreen(screenName)
+        CompileScreen = Screen(screenName).render
+    end function
+    
+    sub setCompiledScreen(compiledData)
+        templateScreen = compiledData
+    end sub
+    
+    sub SaveScreenToDB(screenName)
+      DBDictionary(&quot;XMLScreen_&quot; &amp; screenName) = Screen(screenName).render
+    end sub
+    
+    sub RemoveScreenFromDB(screenName)
+      DBDictionary.remove(&quot;XMLScreen_&quot; &amp; screenName)
+    end sub
+    
+    sub loadTemplate(screenName)
+      templateScreen = DBDictionary(&quot;XMLScreen_&quot; &amp; screenName)
+    end sub
+    
+    sub runInternalProcess
+      args = xml_dialog.get_answer
+      dim Title
+      set xml_components = Buffer.create
+      xml_footer = &quot;&lt;/Components&gt;&lt;/VDOMFormContainer&gt;&quot;
+      endOfInternalProcess = false
+      EndMsg = &quot;&quot;
+      
+      if instr(args(&quot;step&quot;),&quot;&gt;&quot;)&lt;&gt;0 then
+        mainStep = split(args(&quot;step&quot;),&quot;&gt;&quot;)(0)
+        objSender = split(args(&quot;step&quot;),&quot;&gt;&quot;)(1)
+        sessionDictionary(&quot;objSender&quot;) = objSender
+      else
+        mainStep = args(&quot;step&quot;)
+        objSender = sessionDictionary(&quot;objSender&quot;)
+      end if
+
+      'logger (&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender &amp; &quot; -- &quot; &amp;  TypeName(sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)))
+      if TypeName(sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender))=&quot;Dictionary&quot; then
+        set internalScreen = New XMLScreen
+        select case sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;step&quot;)
+          case &quot;manageDropDown&quot;
+            if mainStep=&quot;Internal&quot; then
+              'Initialization of the Internal process
+              sessionDictionary(&quot;_memLastScreenData&quot;)= args
+              Title = &quot;Gestion d'un champ de formulaire&quot;
+              internalScreen.Width = 400 
+              internalScreen.Height = 170
+              internalScreen.addComponent(&quot;msg&quot;,&quot;Hypertext&quot;)
+              internalScreen.component(&quot;msg&quot;).setProp(&quot;Value&quot;,&quot;Gestion du champ : &lt;b&gt;&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;&lt;/b&gt;.&lt;br&gt;Veuillez choisir une option :&quot;)
+              internalScreen.addComponent(&quot;btns&quot;,&quot;btngroup&quot;)
+              internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Ajouter&quot;,&quot;Internal:AddValue&quot;)
+              internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Modifier&quot;,&quot;Internal:UpdateValue&quot;)
+              internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Supprimer&quot;,&quot;Internal:DeleteValue&quot;)
+              internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Retour&quot;,&quot;Internal:End&quot;)
+            else
+              subprocess = split(mainStep,&quot;:&quot;)
+              select case subprocess(1)
+                case &quot;mainScreen&quot;
+                  Title = &quot;Gestion d'un champ de formulaire&quot;
+                  internalScreen.Width = 400 
+                  internalScreen.Height = 170
+                  internalScreen.addComponent(&quot;msg&quot;,&quot;Hypertext&quot;)
+                  internalScreen.component(&quot;msg&quot;).setProp(&quot;Value&quot;,&quot;Gestion du champ : &lt;b&gt;&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;&lt;/b&gt;.&lt;br&gt;Veuillez choisir une option :&quot;)
+                  internalScreen.addComponent(&quot;btns&quot;,&quot;btngroup&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Ajouter&quot;,&quot;Internal:AddValue&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Modifier&quot;,&quot;Internal:UpdateValue&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Supprimer&quot;,&quot;Internal:DeleteValue&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Retour&quot;,&quot;Internal:End&quot;)
+                case &quot;AddValue&quot;
+                  Title = &quot;Ajouter une valeur&quot;
+                  internalScreen.Width = 400 
+                  internalScreen.Height = 170
+                  internalScreen.addComponent(&quot;newvalue&quot;,&quot;TextBox&quot;)
+                  internalScreen.Component(&quot;newvalue&quot;).label(&quot;Nouvelle valeur :&quot;)
+                  internalScreen.addComponent(&quot;btns&quot;,&quot;btngroup&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Valider&quot;,&quot;Internal:SaveValue&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Annuler&quot;,&quot;Internal:mainScreen&quot;)
+                  
+                case &quot;SaveValue&quot;
+                  tmpValue = asjson(DbDictionary(&quot;_&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;_&quot;))
+                  AppendToArray(tmpValue,args(&quot;newvalue&quot;))
+                  DbDictionary(&quot;_&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;_&quot;)=toJson(tmpValue)
+                  Title = &quot;Mémorisation&quot;
+                  internalScreen.Width = 400 
+                  internalScreen.Height = 150
+                  internalScreen.addComponent(&quot;msg&quot;,&quot;Hypertext&quot;)
+                  internalScreen.component(&quot;msg&quot;).setProp(&quot;Value&quot;,&quot;La valeur &lt;b&gt;&quot; &amp; args(&quot;newvalue&quot;) &amp; &quot;&lt;/b&gt; a bien été ajouté au champ &lt;b&gt;&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;&lt;/b&gt;.&quot;)                  
+                  internalScreen.addComponent(&quot;btns&quot;,&quot;btngroup&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Ajouter une autre&quot;,&quot;Internal:AddValue&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Retour au menu&quot;,&quot;Internal:mainScreen&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Terminer&quot;,&quot;Internal:End&quot;)
+                  
+                case &quot;UpdateValue&quot;
+                  Title = &quot;Modifier une valeur&quot;
+                  internalScreen.Width = 400 
+                  internalScreen.Height = 250
+                  internalScreen.addComponent(&quot;oldvalue&quot;,&quot;DropDown&quot;)
+                  internalScreen.Component(&quot;oldvalue&quot;).label(&quot;La valeur :&quot;)
+                  internalScreen.Component(&quot;oldvalue&quot;).setProp(&quot;options&quot;,ArraySort(asjson(DbDictionary(&quot;_&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;_&quot;))))
+                  internalScreen.addComponent(&quot;newvalue&quot;,&quot;TextBox&quot;)
+                  internalScreen.Component(&quot;newvalue&quot;).label(&quot;Sera remplacée par :&quot;)
+                  internalScreen.addComponent(&quot;btns&quot;,&quot;btngroup&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Valider&quot;,&quot;Internal:SaveUpdate&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Annuler&quot;,&quot;Internal:mainScreen&quot;)
+                  
+                case &quot;SaveUpdate&quot;
+                  tmpArray = Array
+                  for each elt in asjson(DbDictionary(&quot;_&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;_&quot;))
+                    if elt &lt;&gt; args(&quot;oldvalue&quot;) then
+                      AppendToArray(tmpArray,elt)
+                    else
+                      AppendToArray(tmpArray,args(&quot;newvalue&quot;))
+                    end if
+                  next
+                  DbDictionary(&quot;_&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;_&quot;)=tojson(tmpArray)
+                  
+                  Title = &quot;Mémorisation&quot;
+                  internalScreen.Width = 400 
+                  internalScreen.Height = 180
+                  internalScreen.addComponent(&quot;msg&quot;,&quot;Hypertext&quot;)
+                  internalScreen.component(&quot;msg&quot;).setProp(&quot;Value&quot;,&quot;La valeur &lt;b&gt;&quot; &amp; args(&quot;oldvalue&quot;) &amp; &quot;&lt;/b&gt; a bien été remplacée par la valeur &lt;b&gt;&quot; &amp; args(&quot;newvalue&quot;) &amp; &quot;&lt;/b&gt;.&quot;)                  
+                  internalScreen.addComponent(&quot;btns&quot;,&quot;btngroup&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Retour au menu&quot;,&quot;Internal:mainScreen&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Terminer&quot;,&quot;Internal:End&quot;)
+                
+                case &quot;DeleteValue&quot;
+                  Title = &quot;Supprimer une valeur&quot;
+                  internalScreen.Width = 400 
+                  internalScreen.Height = 200
+                  internalScreen.addComponent(&quot;thevalue&quot;,&quot;DropDown&quot;)
+                  internalScreen.Component(&quot;thevalue&quot;).label(&quot;La valeur :&quot;)
+                  internalScreen.Component(&quot;thevalue&quot;).setProp(&quot;options&quot;,ArraySort(asjson(DbDictionary(&quot;_&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;_&quot;))))
+                  internalScreen.addComponent(&quot;msg&quot;,&quot;Hypertext&quot;)
+                  internalScreen.component(&quot;msg&quot;).setProp(&quot;Value&quot;,&quot;Va être supprimée.&quot;)
+                  internalScreen.addComponent(&quot;btns&quot;,&quot;btngroup&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Valider&quot;,&quot;Internal:SaveDelete&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Annuler&quot;,&quot;Internal:mainScreen&quot;)
+                  
+                case &quot;SaveDelete&quot;
+                  tmpArray = Array
+                  for each elt in asjson(DbDictionary(&quot;_&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;_&quot;))
+                    if elt &lt;&gt; args(&quot;thevalue&quot;) then
+                      AppendToArray(tmpArray,elt)
+                    end if
+                  next
+                  DbDictionary(&quot;_&quot; &amp; sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;data&quot;) &amp; &quot;_&quot;)=tojson(tmpArray)
+                  
+                  Title = &quot;Mémorisation&quot;
+                  internalScreen.Width = 400 
+                  internalScreen.Height = 150
+                  internalScreen.addComponent(&quot;msg&quot;,&quot;Hypertext&quot;)
+                  internalScreen.component(&quot;msg&quot;).setProp(&quot;Value&quot;,&quot;La valeur &lt;b&gt;&quot; &amp; args(&quot;thevalue&quot;) &amp; &quot;&lt;/b&gt; a bien été supprimée&quot;)                  
+                  internalScreen.addComponent(&quot;btns&quot;,&quot;btngroup&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Retour au menu&quot;,&quot;Internal:mainScreen&quot;)
+                  internalScreen.Component(&quot;btns&quot;).addBtn(&quot;Terminer&quot;,&quot;Internal:End&quot;)
+                  
+                
+                case &quot;End&quot;
+                  EndMsg = &quot;&lt;center&gt;&lt;br&gt;&lt;br&gt;Fin du traitement, vous allez retourner au formulaire.&lt;/center&gt;&quot;
+                  endOfInternalProcess = true
+             
+                case else
+                
+              end select
+            end if
+          case else
+          
+        end select
+        
+        if endOfInternalProcess then
+          Title =&quot;Retour au formulaire&quot;
+          internalScreen.Height = 150
+          internalScreen.addComponent(&quot;msg&quot;,&quot;Hypertext&quot;)
+          internalScreen.component(&quot;msg&quot;).setProp(&quot;Value&quot;,EndMsg)
+          for each key in sessionDictionary(&quot;_memLastScreenData&quot;)
+            if (key &lt;&gt; &quot;macros_id&quot;) and (key &lt;&gt; &quot;macros_id&quot;) and (key &lt;&gt; &quot;id&quot;) and (key &lt;&gt; &quot;sender&quot;) then
+              internalScreen.addComponent(key,&quot;TextBox&quot;)
+              internalScreen.component(key).visible(false)
+              internalScreen.component(key).setProp(&quot;defaultValue&quot;,replace(sessionDictionary(&quot;_memLastScreenData&quot;)(key),&quot;&quot;&quot;&quot;,&quot;&amp;quot;&quot;))
+            end if
+          next
+          internalScreen.addComponent(&quot;go&quot;,&quot;autosubmit&quot;)
+          internalScreen.Component(&quot;go&quot;).SetNextStep(sessionDictionary(&quot;_internalData&quot; &amp; &quot;_&quot; &amp; objSender)(&quot;laststep&quot;))
+        else
+          
+        end if
+        
+        'Adding some additionnal textbox to store the Step
+        internalScreen.addComponent(&quot;step&quot;,&quot;TextBox&quot;)
+        internalScreen.component(&quot;step&quot;).visible(false)
+        
+        'Adding some additionnal textbox to store MacroID value
+        internalScreen.addComponent(&quot;macros_id&quot;,&quot;TextBox&quot;)
+        internalScreen.component(&quot;macros_id&quot;).visible(false)
+        internalScreen.component(&quot;macros_id&quot;).setProp(&quot;defaultValue&quot;,xml_dialog.get_macros_id())
+        xml_dialog.set_size( internalScreen.Width,internalScreen.Height)
+        xml_components.write(internalScreen.render)
+      else
+        set errScreen = New XMLScreen
+        
+        title = &quot;Can not get internal sub process !&quot;
+        errScreen.Height = 230
+        
+        'Create the message to show
+        errScreen.addComponent(&quot;msg&quot;,&quot;Hypertext&quot;)
+        errScreen.component(&quot;msg&quot;).setProp(&quot;Value&quot;,&quot;Impossible to find the variable internalstep to run any internal process ! &lt;br&gt;Something is going wrong ! Check the step in your main macro.&quot;)
+        
+        errScreen.addComponent(&quot;btn&quot;,&quot;SimpleButton&quot;)
+        errScreen.component(&quot;btn&quot;).setProp(&quot;value&quot;,&quot;OK&quot;)
+        
+        'Adding some additionnal textbox to store MacroID value
+        errScreen.addComponent(&quot;macros_id&quot;,&quot;TextBox&quot;)
+        errScreen.component(&quot;macros_id&quot;).visible(false)
+        errScreen.component(&quot;macros_id&quot;).setProp(&quot;defaultValue&quot;,xml_dialog.get_macros_id())
+        
+        xml_dialog.set_size( errScreen.Width,errScreen.Height)
+        xml_components.write(errScreen.render)
+      
+      end if
+      
+      xml_header = &quot;&lt;?xml version='1.0' encoding='utf-8'?&gt;&lt;VDOMFormContainer&gt;&lt;Properties&gt;&lt;Property name='label'&gt;&quot; &amp; wrappToCData(title) &amp; &quot;&lt;/Property&gt;&lt;/Properties&gt;&lt;Components&gt;&quot; 
+      xml_dialog.show_xml_form ( xml_header &amp; xml_components.getvalue &amp;  xml_footer  )
+    
+    end sub
+    
+    sub ProShareRefresh(itempos)
+      xml_dialog.executeCallback(&quot;selectEltOfPath&quot;, &quot;{ itemid : &quot; &amp; cstr(itempos) &amp; &quot;}&quot;)
+    end sub
+    
+    sub showScreen(screenName)
+    
+      dim Title
+      set xml_components = Buffer.create
+      xml_footer = &quot;&lt;/Components&gt;&lt;/VDOMFormContainer&gt;&quot;
+ 
+      if screenName in Screen then
+      
+        host = system.application_hosts
+        title = Screen(screenName).Title
+        args = xml_dialog.get_answer
+        
+        'Adding some additionnal textbox to store the selected Tab
+        Screen(screenName).addComponent(&quot;tabselected&quot;,&quot;TextBox&quot;)
+        Screen(screenName).component(&quot;tabselected&quot;).visible(false)
+        Screen(screenName).component(&quot;tabselected&quot;).setProp(&quot;defaultValue&quot;,args(&quot;tabselected&quot;))
+        
+        'Adding some additionnal textbox to store Next Step
+        Screen(screenName).addComponent(&quot;step&quot;,&quot;TextBox&quot;)
+        Screen(screenName).component(&quot;step&quot;).visible(false)
+        Screen(screenName).component(&quot;step&quot;).setProp(&quot;defaultValue&quot;,Screen(screenName).getNextStep)
+        
+        'Adding some additionnal textbox to store MacroID value        
+        Screen(screenName).addComponent(&quot;macros_id&quot;,&quot;TextBox&quot;)
+        Screen(screenName).component(&quot;macros_id&quot;).visible(false)
+        Screen(screenName).component(&quot;macros_id&quot;).setProp(&quot;defaultValue&quot;,xml_dialog.get_macros_id())
+        
+        'Adding css for tooltip
+        Screen(screenName).addComponent(&quot;--HINT_CSS&quot;,&quot;Hypertext&quot;)
+        Screen(screenName).component(&quot;--HINT_CSS&quot;).visible(false)
+        Screen(screenName).component(&quot;--HINT_CSS&quot;).setProp(&quot;Value&quot;,&quot;&lt;style type=&quot;&quot;text/css&quot;&quot; media=&quot;&quot;screen&quot;&quot;&gt;.hint,[data-hint]{position:relative;display:inline-block}.hint:before,.hint:after,[data-hint]:before,[data-hint]:after{position:absolute;-webkit-transform:translate3d(0,0,0);-moz-transform:translate3d(0,0,0);transform:translate3d(0,0,0);visibility:hidden;opacity:0;z-index:1000000;pointer-events:none;-webkit-transition:.3s ease;-moz-transition:.3s ease;transition:.3s ease}.hint:hover:before,.hint:hover:after,.hint:focus:before,.hint:focus:after,[data-hint]:hover:before,[data-hint]:hover:after,[data-hint]:focus:before,[data-hint]:focus:after{visibility:visible;opacity:1}.hint:before,[data-hint]:before{content:'';position:absolute;background:transparent;border:6px solid transparent;z-index:1000001}.hint:after,[data-hint]:after{content:attr(data-hint);background:#383838;color:#fff;text-shadow:0 -1px 0 #000;padding:8px 10px;font-size:12px;line-height:12px;white-space:nowrap;box-shadow:4px 4px 8px rgba(0,0,0,.3)}.hint--top:before{border-top-color:#383838}.hint--bottom:before{border-bottom-color:#383838}.hint--left:before{border-left-color:#383838}.hint--right:before{border-right-color:#383838}.hint--top:before{margin-bottom:-12px}.hint--top:after{margin-left:-18px}.hint--top:before,.hint--top:after{bottom:100%;left:50%}.hint--top:hover:after,.hint--top:hover:before,.hint--top:focus:after,.hint--top:focus:before{-webkit-transform:translateY(-8px);-moz-transform:translateY(-8px);transform:translateY(-8px)}.hint--bottom:before{margin-top:-12px}.hint--bottom:after{margin-left:-18px}.hint--bottom:before,.hint--bottom:after{top:100%;left:50%}.hint--bottom:hover:after,.hint--bottom:hover:before,.hint--bottom:focus:after,.hint--bottom:focus:before{-webkit-transform:translateY(8px);-moz-transform:translateY(8px);transform:translateY(8px)}.hint--right:before{margin-left:-12px;margin-bottom:-6px}.hint--right:after{margin-bottom:-14px}.hint--right:before,.hint--right:after{left:100%;bottom:50%}.hint--right:hover:after,.hint--right:hover:before,.hint--right:focus:after,.hint--right:focus:before{-webkit-transform:translateX(8px);-moz-transform:translateX(8px);transform:translateX(8px)}.hint--left:before{margin-right:-12px;margin-bottom:-6px}.hint--left:after{margin-bottom:-14px}.hint--left:before,.hint--left:after{right:100%;bottom:50%}.hint--left:hover:after,.hint--left:hover:before,.hint--left:focus:after,.hint--left:focus:before{-webkit-transform:translateX(-8px);-moz-transform:translateX(-8px);transform:translateX(-8px)}.hint--error:after{background-color:#b34e4d;text-shadow:0 -1px 0 #592726}.hint--error.hint--top:before{border-top-color:#b34e4d}.hint--error.hint--bottom:before{border-bottom-color:#b34e4d}.hint--error.hint--left:before{border-left-color:#b34e4d}.hint--error.hint--right:before{border-right-color:#b34e4d}.hint--warning:after{background-color:#c09854;text-shadow:0 -1px 0 #6c5328}.hint--warning.hint--top:before{border-top-color:#c09854}.hint--warning.hint--bottom:before{border-bottom-color:#c09854}.hint--warning.hint--left:before{border-left-color:#c09854}.hint--warning.hint--right:before{border-right-color:#c09854}.hint--info:after{background-color:#3986ac;text-shadow:0 -1px 0 #193b4d}.hint--info.hint--top:before{border-top-color:#3986ac}.hint--info.hint--bottom:before{border-bottom-color:#3986ac}.hint--info.hint--left:before{border-left-color:#3986ac}.hint--info.hint--right:before{border-right-color:#3986ac}.hint--success:after{background-color:#458746;text-shadow:0 -1px 0 #1a321a}.hint--success.hint--top:before{border-top-color:#458746}.hint--success.hint--bottom:before{border-bottom-color:#458746}.hint--success.hint--left:before{border-left-color:#458746}.hint--success.hint--right:before{border-right-color:#458746}.hint--always:after,.hint--always:before{opacity:1;visibility:visible}.hint--always.hint--top:after,.hint--always.hint--top:before{-webkit-transform:translateY(-8px);-moz-transform:translateY(-8px);transform:translateY(-8px)}.hint--always.hint--bottom:after,.hint--always.hint--bottom:before{-webkit-transform:translateY(8px);-moz-transform:translateY(8px);transform:translateY(8px)}.hint--always.hint--left:after,.hint--always.hint--left:before{-webkit-transform:translateX(-8px);-moz-transform:translateX(-8px);transform:translateX(-8px)}.hint--always.hint--right:after,.hint--always.hint--right:before{-webkit-transform:translateX(8px);-moz-transform:translateX(8px);transform:translateX(8px)}.hint--rounded:after{border-radius:4px}.hint--bounce:before,.hint--bounce:after{-webkit-transition:opacity .3s ease,visibility .3s ease,-webkit-transform .3s cubic-bezier(0.71,1.7,.77,1.24);-moz-transition:opacity .3s ease,visibility .3s ease,-moz-transform .3s cubic-bezier(0.71,1.7,.77,1.24);transition:opacity .3s ease,visibility .3s ease,transform .3s cubic-bezier(0.71,1.7,.77,1.24)}&lt;/style&gt;&quot;)
+
+        'Adding progessbar
+        Screen(screenName).addComponent(&quot;progressbar&quot;,&quot;Hypertext&quot;)
+        Screen(screenName).component(&quot;progressbar&quot;).visible(false)
+        'topLoaderSize = cstr((cint(Screen(screenName).height)/3.2))
+        if Screen(screenName).height &lt; 170 then
+          topLoaderSize = cstr(Screen(screenName).height - 90)          
+        else
+          topLoaderSize = &quot;100&quot;
+        end if
+        'posLeft = cstr(cint((Screen(screenName).width - cint((Screen(screenName).height)/3.2))/2))
+        posLeft = cstr(Screen(screenName).width - 125)
+        'posTop = cstr(cint((Screen(screenName).height - 50 - cint((Screen(screenName).height)/3.2))/2))
+        posTop = &quot;28&quot;
+  
+        set html = buffer.create
+        logger tojson(host)
+        html.write &quot;&lt;script src='http://&quot; &amp; host(0) &amp; resources.public_link(&quot;jquery.percentageloader-0.1.min.js&quot;) &amp; &quot;'&gt;&lt;/script&gt;&quot;
+        html.write &quot;&lt;style type=&quot;&quot;text/css&quot;&quot; media=&quot;&quot;screen&quot;&quot; &gt;&quot; &amp; resources.open(&quot;jquery.percentageloader-0.1.css&quot;).getvalue &amp; &quot;&lt;/style&gt;&quot;
+        html.write &quot;&lt;script&gt;&quot;
+        html.write &quot;$('#o_&quot; &amp; Replace(xml_dialog.containerGUID,&quot;-&quot;,&quot;_&quot;) &amp; &quot;').append( &quot;&quot;&lt;div id='topLoader' style='position: absolute; top: &quot;+posTop+&quot;px; left: &quot;+posLeft+&quot;px;'&gt;&lt;/div&gt;&quot;&quot; );&quot;
+        html.write &quot;var $topLoader = $('#topLoader').percentageLoader({width: &quot;+topLoaderSize+&quot;, height: &quot;+topLoaderSize+&quot; , controllable : false, progress : 0.0, onProgressUpdate : function(val) {&quot;
+        'html.write &quot;      $topLoader.setValue(Math.round(val * 100.0));&quot;
+        html.write &quot;    }});&quot;
+        'html.write &quot;var topLoaderRunning = false;&quot;
+        'html.write &quot;topLoaderRunning = true;&quot;
+        html.write &quot;$topLoader.setProgress(0);&quot;
+        html.write &quot;$topLoader.setValue('...');&quot;
+        html.write &quot;$('#topLoader').css('visibility','hidden')&quot;
+        
+        html.write &quot;&lt;/script&gt;&quot;
+        
+        Screen(screenName).component(&quot;progressbar&quot;).setProp(&quot;Value&quot;,html.getValue)
+
+        'Adding some script for e2VDOM management for tooltip
+        Screen(screenName).addComponent(&quot;E2VDOM&quot;,&quot;Hypertext&quot;)
+        Screen(screenName).component(&quot;E2VDOM&quot;).visible(false)
+        set html = buffer.create
+        html.write &quot;&lt;script type='text/javascript'&gt;&quot;
+        html.write &quot;e2vdomSV['DialogGUID'] = '#o_&quot; &amp; Replace(xml_dialog.containerGUID,&quot;-&quot;,&quot;_&quot;) &amp; &quot;';&quot;
+        html.write &quot;e2vdomSV['MacrosID'] = '&quot; &amp; xml_dialog.get_macros_id() &amp; &quot;';&quot;
+        
+        'set callbackfunctions
+        html.write resources.open(&quot;dialog_v2_callback.js&quot;).getvalue
+        html.write &quot;&lt;/script&gt;&quot;
+        Screen(screenName).component(&quot;E2VDOM&quot;).setProp(&quot;Value&quot;,html.getValue)
+        
+        xml_dialog.set_size( Screen(screenName).Width,Screen(screenName).Height)
+        xml_components.write(Screen(screenName).render)
+      else
+        set errScreen = New XMLScreen
+        
+        title = &quot;No Screen found !&quot;
+        
+        'Create the message to show
+        errScreen.addComponent(&quot;msg&quot;,&quot;Hypertext&quot;)
+        errScreen.component(&quot;msg&quot;).setProp(&quot;Value&quot;,&quot;Impossible to find the screen (&lt;b&gt;&quot; &amp; screenName &amp; &quot;&lt;/b&gt;) in the list of screen created !&quot;)
+        
+        'Adding some additionnal textbox to store Next Step
+        errScreen.addComponent(&quot;step&quot;,&quot;TextBox&quot;)
+        errScreen.component(&quot;step&quot;).visible(false)
+        errScreen.component(&quot;step&quot;).setProp(&quot;defaultValue&quot;,errScreen.getNextStep)
+        
+        'Adding some additionnal textbox to store MacroID value
+        errScreen.addComponent(&quot;macros_id&quot;,&quot;TextBox&quot;)
+        errScreen.component(&quot;macros_id&quot;).visible(false)
+        errScreen.component(&quot;macros_id&quot;).setProp(&quot;defaultValue&quot;,xml_dialog.get_macros_id())
+        
+        xml_dialog.set_size( errScreen.Width,errScreen.Height)
+        xml_components.write(errScreen.render)
+      end if
+      
+      xml_header = &quot;&lt;?xml version='1.0' encoding='utf-8'?&gt;&lt;VDOMFormContainer&gt;&lt;Properties&gt;&lt;Property name='label'&gt;&quot; &amp; wrappToCData(title) &amp; &quot;&lt;/Property&gt;&lt;/Properties&gt;&lt;Components&gt;&quot; 
+      xml_dialog.show_xml_form ( xml_header &amp; xml_components.getvalue &amp; templateScreen &amp;  xml_footer  )
+
+    end sub
+    
+end class</source>
+		
+	
+		<class_name></class_name>
+		
+	
+		<is_button>0</is_button>
+		
+	
+		<ob_board>0</ob_board>
+		
+	
+		<macros_picture></macros_picture>
+		
+	
+		<description></description>
+		
+	
+		<guid>83f7a1ef-3dbf-4872-9858-da0c076ae487</guid>
+		
+	
+		<timer_guid></timer_guid>
+		
+	
+		<custom_event_guid></custom_event_guid>
+		
+	
+		<page></page>
+		
+	
+		<type>library</type>
+	</macro>
+	
+	
+	<macro>
+		
+	
+		<name>New e-mail</name>
+		
+	
+		<source>'--- General libs
+'#include(lib_lang)
+'#include(lib_utils)
+'#include(lib_quicksort)
+'#include(lib_func_parser_dialog)
+'#include(lib_dialog_2)
+'#include(lib_EAC_functions)
+
+
+'Initial SetUp
+args = xml_dialog.get_answer
+logger (&quot;Data sent :&quot; &amp; tojson(args))
+logger Appinmail.utils.parseEmails(args)
+
+set current_user = ProAdmin.current_user
+
+if &quot;step&quot; in args then
+  if args( &quot;step&quot; )=&quot;&quot; then
+    operation_step =&quot;Init&quot;
+  else
+    operation_step = args( &quot;step&quot; )
+  end if
+else
+  operation_step =&quot;Init&quot;
+end if
+
+'###############################################################################################
+'#                                Screen Definition                                            #
+'###############################################################################################
+'VDOMData = DynamicVDOM.render(vdomxml) 
+set MyForms = New XMLDialogBuilder
+
+'-------------------------------------- VDOM Screen TEST ---------------------------------------
+' TEST to include VDOM XML in XML Dialog
+'-----------------------------------------------------------------------------------------------    
+    MyForms.addScreen(&quot;Show VDOM&quot;)
+    MyForms.Screen(&quot;Show VDOM&quot;).addComponent(&quot;VDOMXML&quot;,&quot;hypertext&quot;)
+    
+    vdomxml =  &quot;&lt;TEXT name='test' value='test'/&gt;&quot;
+   
+    DynamicVDOM.left=&quot;0&quot;
+    DynamicVDOM.top=&quot;0&quot;
+    DynamicVDOM.width=&quot;600&quot;
+    DynamicVDOM.width=&quot;300&quot;
+    'VDOMData = DynamicVDOM.render(vdomxml) 
+    'MyForms.Screen(&quot;Show VDOM&quot;).Component(&quot;VDOMXML&quot;).value(VDOMData)
+
+    'logger Replace(VDOMData, &quot;&lt;&quot;, &quot;&amp;lt;&quot;)
+    
+'-------------------------------------- Std Composer -------------------------------------------
+' Main error Window
+'-----------------------------------------------------------------------------------------------    
+  MyForms.addScreen(&quot;Std Composer&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).width  = 800
+  MyForms.Screen(&quot;Std Composer&quot;).Height = 800
+  MyForms.Screen(&quot;Std Composer&quot;).Title  = &quot;Standard mail composer&quot;
+  'MyForms.Screen(&quot;Std Composer&quot;).addComponent(&quot;fromemail&quot;,&quot;livesearch&quot;)
+  'MyForms.Screen(&quot;Std Composer&quot;).Component(&quot;fromemail&quot;).label(&quot;From :&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).addComponent(&quot;toemail&quot;,&quot;livesearch&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).Component(&quot;toemail&quot;).label(&quot;To :&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).Component(&quot;toemail&quot;).sourceURI(&quot;/recipientlivesearch&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).addComponent(&quot;subject&quot;,&quot;TextBox&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).Component(&quot;subject&quot;).label(&quot;Subject :&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).addComponent(&quot;message&quot;,&quot;RichTextArea&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).Component(&quot;message&quot;).label(&quot;Message :&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).Component(&quot;message&quot;).height(&quot;400&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).addComponent(&quot;attach&quot;,&quot;FileUpload&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).Component(&quot;attach&quot;).label(&quot;Attachments :&quot;)
+  
+  MyForms.Screen(&quot;Std Composer&quot;).addComponent(&quot;btns&quot;,&quot;btngroup&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).Component(&quot;btns&quot;).addBtn(&quot;Send&quot;,&quot;sendEmail&quot;)
+  MyForms.Screen(&quot;Std Composer&quot;).Component(&quot;btns&quot;).addBtn(&quot;Cancel&quot;,&quot;Exit&quot;)
+
+'-------------------------------------- Msg Email sent -----------------------------------------
+' Msg box to show the email was sent
+'-----------------------------------------------------------------------------------------------
+    MyForms.addScreen(&quot;Email Sent Msg&quot;)
+    MyForms.Screen(&quot;Email Sent Msg&quot;).addComponent(&quot;comment&quot;,&quot;Text&quot;)
+    MyForms.Screen(&quot;Email Sent Msg&quot;).Component(&quot;comment&quot;).setCenter(true)
+    MyForms.Screen(&quot;Email Sent Msg&quot;).Component(&quot;comment&quot;).value(&quot;&lt;br&gt;Your email was correctly sent.&quot;)
+    MyForms.Screen(&quot;Email Sent Msg&quot;).Title = &quot;Sending email ...&quot;
+    MyForms.Screen(&quot;Email Sent Msg&quot;).addComponent(&quot;timeout&quot;,&quot;Timer&quot;)
+    MyForms.Screen(&quot;Email Sent Msg&quot;).Component(&quot;timeout&quot;).setTimer(&quot;Exit&quot;,1000)
+    
+     
+    
+ Function tt(mailbox)
+ 
+ content = args(&quot;message&quot;)
+ 
+   ' userguid = Proadmin.currentuser().guid
+   ' logger(userguid)
+    
+    files = Dictionary
+    logger(&quot;Attachments: &quot; &amp; args(&quot;attach&quot;))
+    if args(&quot;attach&quot;) &lt;&gt; &quot;&quot; then
+        attach = split(args(&quot;attach&quot;), &quot;,&quot;)
+        for each a in attach
+'            logger(&quot;Attachment: &quot; &amp; a)
+            Set f = xml_dialog.uploadedfile(a)
+'            logger(&quot;- name: &quot; &amp; f.name)
+            files(f.name) = f.data
+            f.remove()
+        next
+'        for each f in files
+'            logger(f)
+'        next
+    end if
+    xml_dialog.clearfiles()
+
+    toEmails = Appinmail.utils.parseEmails(args)
+    for each email in toEmails
+        try
+            mailbox.send(email, &quot;&quot;, &quot;&quot;, args(&quot;subject&quot;), content, files)
+        catch
+        end try
+    next
+          
+end function 
+'############################################################################################
+'#                                                                                          #
+'#                         State machine start with state / Init /                          #
+'#                                                                                          #
+'############################################################################################
+
+if instr(operation_step,&quot;&gt;&quot;)&lt;&gt;0 then
+  mainStep = split(operation_step,&quot;&gt;&quot;)(0)
+  subStep = split(operation_step,&quot;&gt;&quot;)(1)
+else
+  mainStep = operation_step
+  subStep = &quot;&quot;
+end if
+
+logger (&quot;operation step :&quot; &amp; operation_step)
+
+Select case mainStep
+
+  case &quot;Init&quot; 
+    MyForms.ShowScreen(&quot;Std Composer&quot;)
+
+  case &quot;sendEmail&quot;
+
+  Call tt(ProMail.selected_mailbox)
+  
+    MyForms.ShowScreen(&quot;Email Sent Msg&quot;)  
+
+  case &quot;Exit&quot;
+    logger (&quot;End of Processing Rules&quot;)
+
+end select</source>
+		
+	
+		<class_name></class_name>
+		
+	
+		<is_button>1</is_button>
+		
+	
+		<ob_board>3</ob_board>
+		
+	
+		<macros_picture></macros_picture>
+		
+	
+		<description></description>
+		
+	
+		<guid>0d57fcc1-ffdf-4694-8a08-31ce57870fda</guid>
+		
+	
+		<timer_guid></timer_guid>
+		
+	
+		<custom_event_guid></custom_event_guid>
+		
+	
+		<page>home</page>
+		
+	
+		<type>button</type>
+	</macro>
+	
+	
+	<macro>
+		
+	
+		<name>lib_utils</name>
+		
+	
+		<source></source>
+		
+	
+		<class_name></class_name>
+		
+	
+		<is_button>0</is_button>
+		
+	
+		<ob_board>0</ob_board>
+		
+	
+		<macros_picture></macros_picture>
+		
+	
+		<description></description>
+		
+	
+		<guid>e472fd59-a72f-4530-a7cb-a3b2a95577f6</guid>
+		
+	
+		<timer_guid></timer_guid>
+		
+	
+		<custom_event_guid></custom_event_guid>
+		
+	
+		<page></page>
+		
+	
+		<type>library</type>
+	</macro>
+</plugin>
