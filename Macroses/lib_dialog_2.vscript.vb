@@ -189,14 +189,18 @@ class LiveSearch: inherits component
       mybase.setProp("sourceURI",value)
     end sub
     
-	sub sourceEvent(value)
+    sub sourceEvent(value)
       mybase.setProp("sourceEvent",value)
     end sub
 	
-	sub sourceData(value)
+    sub sourceData(value)
       mybase.setProp("sourceData",value)
     end sub
-	
+
+    sub defaultValue(value)
+      mybase.setProp("defaultValue",value)
+    end sub
+
     function check(byref globalContext)
       check=true
     end function
