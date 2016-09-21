@@ -71,6 +71,55 @@ set MyForms = New XMLDialogBuilder
   MyForms.Screen("Std Composer").Component("btns").addBtn("Send","sendEmail")
   MyForms.Screen("Std Composer").Component("btns").addBtn("Cancel","Exit")
 
+
+Select case ProMail.mailcomposer_command
+
+  case "reply"
+    MyForms.Screen("Std Composer").Component("subject").defaultValue("RE: " & ProMail.selected_mail.subject)
+    if ProMail.selected_mail.sender.name = "" then
+        sender_email = ProMail.selected_mail.sender.email
+    else
+        sender_email = ProMail.selected_mail.sender.name & " <" & ProMail.selected_mail.sender.email & ">"
+    end if
+    MyForms.Screen("Std Composer").Component("toemail").defaultValue(sender_email)
+    sender_name = ProMail.selected_mail.sender.name
+    if sender_name = "" then
+        sender_name = ProMail.selected_mail.sender.email
+    end if
+    MyForms.Screen("Std Composer").Component("message").defaultValue("<br><br>In reply to message from " & sender_name & " on " & ProMail.selected_mail.datetime & ":<br>" & ProMail.selected_mail.body)
+
+  case "reply_all"
+    MyForms.Screen("Std Composer").Component("subject").defaultValue("RE: " & ProMail.selected_mail.subject)
+    if ProMail.selected_mail.sender.name = "" then
+        sender_email = ProMail.selected_mail.sender.email
+    else
+        sender_email = ProMail.selected_mail.sender.name & " <" & ProMail.selected_mail.sender.email & ">"
+    end if
+    for each r in ProMail.selected_mail.recipients
+        sender_email = sender_email & ", "
+        if r.name = "" then
+            sender_email = sender_email & r.email
+        else
+            sender_email = sender_email & r.name & " <" & r.email & ">"
+        end if
+    next
+    MyForms.Screen("Std Composer").Component("toemail").defaultValue(sender_email)
+    sender_name = ProMail.selected_mail.sender.name
+    if sender_name = "" then
+        sender_name = ProMail.selected_mail.sender.email
+    end if
+    MyForms.Screen("Std Composer").Component("message").defaultValue("<br><br>In reply to message from " & sender_name & " on " & ProMail.selected_mail.datetime & ":<br>" & ProMail.selected_mail.body)
+
+  case "forward"
+    MyForms.Screen("Std Composer").Component("subject").defaultValue("Fwd: " & ProMail.selected_mail.subject)
+    sender_name = ProMail.selected_mail.sender.name
+    if sender_name = "" then
+        sender_name = ProMail.selected_mail.sender.email
+    end if
+    MyForms.Screen("Std Composer").Component("message").defaultValue("<br>Begin forwarded message from " & sender_name & " on " & ProMail.selected_mail.datetime & ":<br>" & ProMail.selected_mail.body)
+
+end select
+
 '-------------------------------------- Msg Email sent -----------------------------------------
 ' Msg box to show the email was sent
 '-----------------------------------------------------------------------------------------------
