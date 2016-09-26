@@ -63,7 +63,7 @@ set MyForms = New XMLDialogBuilder
   MyForms.Screen("Std Composer").Component("subject").label("Subject :")
   MyForms.Screen("Std Composer").addComponent("message","RichTextArea")
   MyForms.Screen("Std Composer").Component("message").label("Message :")
-  MyForms.Screen("Std Composer").Component("message").height("400")
+  MyForms.Screen("Std Composer").Component("message").height("350")
   MyForms.Screen("Std Composer").addComponent("attach","FileUpload")
   MyForms.Screen("Std Composer").Component("attach").label("Attachments :")
   
@@ -148,8 +148,11 @@ end select
 '            logger("Attachment: " & a)
             Set f = xml_dialog.uploadedfile(a)
 '            logger("- name: " & f.name)
-            files(f.name) = f.data
-            f.remove()
+            try
+                files(f.name) = f.data
+                f.remove()
+            catch
+            end try
         next
 '        for each f in files
 '            logger(f)
