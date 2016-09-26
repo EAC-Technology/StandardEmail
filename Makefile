@@ -1,2 +1,2 @@
 all:
-	-python ../plugin2fs/build.py . ../standardemail_compiled.xml
+	-python ../plugin2fs/build.py . ./build/standardemail_compiled.xml
