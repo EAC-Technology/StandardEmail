@@ -130,6 +130,13 @@ end select
     MyForms.Screen("Email Sent Msg").Title = "Sending email ..."
     MyForms.Screen("Email Sent Msg").addComponent("timeout","Timer")
     MyForms.Screen("Email Sent Msg").Component("timeout").setTimer("Exit",1000)
+
+    MyForms.addScreen("Email Send Err")
+    MyForms.Screen("Email Send Err").addComponent("comment","Text")
+    MyForms.Screen("Email Send Err").Component("comment").setCenter(true)
+    MyForms.Screen("Email Send Err").Title = "Error"
+    MyForms.Screen("Email Send Err").addComponent("btns","btngroup")
+    MyForms.Screen("Email Send Err").Component("btns").addBtn("OK","Init")
     
      
     
@@ -160,14 +167,24 @@ end select
     end if
     xml_dialog.clearfiles()
 
+    f = 0
     toEmails = Appinmail.utils.parseEmails(args)
     for each email in toEmails
 '        try
-            mailbox.send_email(email, "", "", args("subject"), content, files)
+            result = mailbox.send_email(email, "", "", args("subject"), content, files)
+            if result = -1 then
+                MyForms.Screen("Email Send Err").Component("comment").value("<br>An error occured while sending your email: " & mailbox.error_text)
+                MyForms.ShowScreen("Email Send Err")
+                exit function
+            end if
+            f = 1
 '        catch
 '        end try
     next
-          
+    if f = 1 then
+        MyForms.ShowScreen("Email Sent Msg")  
+    end if
+
 end function 
 '############################################################################################
 '#                                                                                          #
@@ -193,8 +210,6 @@ Select case mainStep
   case "sendEmail"
 
   Call tt(ProMail.selected_mailbox)
-  
-    MyForms.ShowScreen("Email Sent Msg")  
 
   case "Exit"
     logger ("End of Processing Rules")
