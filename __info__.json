@@ -1,5 +1,5 @@
 {
-    "version": "0.1.1", 
+    "version": "0.1.2", 
     "guid": "7fe4bae0-cd48-4688-a88c-57fe34d2f714", 
     "description": "This plug-in to send usual emails.", 
     "name": "Standard email", 
