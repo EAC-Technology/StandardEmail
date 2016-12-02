@@ -5,6 +5,8 @@
 'There is bug when a child call the same method as a function of its own but from his mother class
 'the function can not return the 
 
+use lib_utils
+
 class component
     
     'general variables

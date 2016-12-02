@@ -1,11 +1,6 @@
 '--- General libs
-'#include(lib_lang)
-'#include(lib_utils)
-'#include(lib_quicksort)
-'#include(lib_func_parser_dialog)
-'#include(lib_dialog_2)
-'#include(lib_EAC_functions)
-
+use lib_utils
+use lib_dialog_2
 
 'Initial SetUp
 args = xml_dialog.get_answer
